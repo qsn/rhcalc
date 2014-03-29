@@ -127,6 +127,7 @@ parse :: String -> Either CalcError [String]
 parse = glue [] (0,0)
   where glue [] (0,0) [] = return [] -- reached the end of the input and all blocks are closed? good parse
         glue xs (0,0) [] = return [reverse xs]
+        glue [] (0,0) (' ':ys) = glue [] (0,0) ys -- skip extra spaces between arguments
         glue xs (0,0) (' ':ys) = (:) <$> pure (reverse xs) <*> glue [] (0,0) ys
         glue xs (a,b) (y:ys)
           | a' < 0    = throwError $ ParseError "Mismatched blocks"    -- a block has been closed that hadn't been opened before? no parse

@@ -191,9 +191,6 @@ unit_convert [String to, String from, value] = case dims of
         unit_from = unit_get from
         unit_to   :: Either CalcError (String, Unit)
         unit_to   = unit_get to
-        eitherToStack :: Either CalcError [Symbol] -> [Symbol]
-        eitherToStack (Left err) = [String $ show err]
-        eitherToStack (Right ss) = ss
         dims :: Either CalcError (Unit, Unit)
         dims = units >>= check_dims
         check_dims :: ((String,Unit),(String,Unit)) -> Either CalcError (Unit,Unit)
@@ -204,10 +201,8 @@ unit_convert [String to, String from, value] = case dims of
           ut <- unit_to
           return (uf,ut)
         convert :: ((String,Unit),(String,Unit)) -> Either CalcError Stack
-        convert (u_from, u_to) = h $ calc script $ contextFromStack [value]
+        convert (u_from, u_to) = runscript script [value]
           where script = unit_scriptfrom (snd u_from) ++ " " ++ unit_scriptto (snd u_to)
-                h (Left err, _) = Left err
-                h (Right _,  ctx) = Right $ fst ctx -- just the stack
 
 -- TODO add dimension equivalence for compound dimensions such as Speed, Force or Volume
 check_dimensions :: (String,Unit) -> (String,Unit) -> Either CalcError (Unit, Unit)
@@ -219,17 +214,24 @@ check_dimensions (str1,unit1) (str2,unit2) = if   dim unit1 == dim unit2
 op_unit = [("convert",(3,1,unit_convert, "Unit converter"))]
 
 
+-- a script here is supposed to contain only basic operators, not core functions, so it has no effect on variables, only the stack
+runscript :: String -> Stack -> Either CalcError Stack
+runscript script stack = h $ calc script $ contextFromStack stack
+  where h (Left err, _) = Left err
+        h (Right _, ctx) = Right $ fst ctx
+
+eitherToStack :: Either CalcError Stack -> Stack
+eitherToStack (Left err) = [String $ show err]
+eitherToStack (Right ss) = ss
+
 -- strings
 op_upper [String a] = [String $ map toUpper a]
 op_lower [String a] = [String $ map toLower a]
 
 -- lists
-op_sum [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in h $ calc ps $ contextFromStack xs
-  where h (Left err, _) = [String $ show err]
-        h (Right _, ctx) = fst ctx
-op_mean [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in h $ calc (ps ++ show n ++ " /") $ contextFromStack xs
-  where h (Left err, _) = [String $ show err]
-        h (Right _, ctx) = fst ctx
+op_sum [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in eitherToStack $ runscript ps xs
+op_mean [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in eitherToStack $ runscript (ps ++ show n ++ " /") xs
+
 op_concat [List   b,List   a] = [List   $ a ++ b]
 op_concat [String b,String a] = [String $ a ++ b]
 op_addhead [List xs, x] = [List $ x : xs]

@@ -1,13 +1,19 @@
-module Operators where
+module Operators
+  (
+    findoperator
+  )
+  where
 
+import Control.Applicative
+import Control.Monad.State
 import Control.Monad.Error
 import Data.Char
 import Data.List
 import Data.Maybe
 import qualified Data.Map as Map
 
-import Stack (Symbol(Int, Frac, Real, Bool, Variable, String, List), Stack, tonum)
-import Core  (calc, fct_run, parse, rmquotes)
+import Stack (Symbol(Int, Frac, Real, Bool, Variable, String, List), Stack, CalcError(OtherError), tonum)
+import {-# SOURCE #-} Core  (calc, st_dft, contextFromStack, CoreFct)
 
 type HelpString = String
 type Fct    = [Symbol] -> [Symbol]
@@ -34,9 +40,10 @@ run (argc,rc,f,_) ys
           _ -> (argc, ys)
         (argv,zs) = splitAt n ys'
 
-findoperator :: String -> Maybe Operator
-findoperator x = Map.lookup x operators
 
+findoperator :: String -> Maybe CoreFct
+findoperator name = wrap <$> Map.lookup name operators
+  where wrap op = state $ \(xs,ys) -> ((), (run op xs, ys))
 
 op_neg :: Fct
 op_neg [a] = case a of
@@ -168,39 +175,61 @@ units = Map.fromList $ [
   ("k",(Temperature,("",""))), ("dC",(Temperature,("273.15 +","273.15 -"))), ("dF",(Temperature,("459.67 + 5 * 9 /","9 * 5 / 459.67 -")))
   ]
 
-unit_get :: String -> Either String (String,Unit)
+unit_get :: String -> Either CalcError (String,Unit)
 unit_get unit = case Map.lookup unit units of
   Just u  -> Right (unit,u)
-  Nothing -> Left $ "unit not found " ++ unit
+  Nothing -> Left $ OtherError $ "unit not found " ++ unit
 
 unit_scriptfrom = fst.snd
 unit_scriptto   = snd.snd
 
 unit_convert :: Fct
-unit_convert [String to, String from, value] = h . liftM convert . join $ liftM2 check_dimensions (unit_get from) (unit_get to)
-  where h (Left error)   = [String error]
-        h (Right result) = result
-        convert (unit_from, unit_to) = let f = \s -> fst $ fct_run s Map.empty in f $ String (unit_scriptto unit_to) : f [String (unit_scriptfrom unit_from),value]
-unit_convert xs = [Int $ genericLength xs]
+unit_convert [String to, String from, value] = case dims of
+  Left err -> [String $ show err]
+  Right _  -> eitherToStack $ units >>= convert
+  where unit_from :: Either CalcError (String, Unit)
+        unit_from = unit_get from
+        unit_to   :: Either CalcError (String, Unit)
+        unit_to   = unit_get to
+        eitherToStack :: Either CalcError [Symbol] -> [Symbol]
+        eitherToStack (Left err) = [String $ show err]
+        eitherToStack (Right ss) = ss
+        dims :: Either CalcError (Unit, Unit)
+        dims = units >>= check_dims
+        check_dims :: ((String,Unit),(String,Unit)) -> Either CalcError (Unit,Unit)
+        check_dims (a,b) = check_dimensions a b
+        units :: Either CalcError ((String,Unit),(String,Unit))
+        units = do
+          uf <- unit_from
+          ut <- unit_to
+          return (uf,ut)
+        convert :: ((String,Unit),(String,Unit)) -> Either CalcError Stack
+        convert (u_from, u_to) = h $ calc script $ contextFromStack [value]
+          where script = unit_scriptfrom (snd u_from) ++ " " ++ unit_scriptto (snd u_to)
+                h (Left err, _) = Left err
+                h (Right _,  ctx) = Right $ fst ctx -- just the stack
 
 -- TODO add dimension equivalence for compound dimensions such as Speed, Force or Volume
-check_dimensions :: (String,Unit) -> (String,Unit) -> Either String (Unit, Unit)
+check_dimensions :: (String,Unit) -> (String,Unit) -> Either CalcError (Unit, Unit)
 check_dimensions (str1,unit1) (str2,unit2) = if   dim unit1 == dim unit2
                                              then Right (unit1, unit2)
-                                             else Left $ "units " ++ str1 ++ " and " ++ str2 ++ " don't match (" ++ (show $ dim unit1) ++ "/" ++ (show $ dim unit2) ++ ")"
+                                             else Left $ OtherError $ "units " ++ str1 ++ " and " ++ str2 ++ " don't match (" ++ (show $ dim unit1) ++ "/" ++ (show $ dim unit2) ++ ")"
   where dim unit = fst unit
 
 op_unit = [("convert",(3,1,unit_convert, "Unit converter"))]
+
 
 -- strings
 op_upper [String a] = [String $ map toUpper a]
 op_lower [String a] = [String $ map toLower a]
 
 -- lists
+{-
 op_sum [List xs] = let (n,ns,ps) = (length xs,showall xs,concat $ replicate (n-1) "+ ") in fst $ calc (ns ++ ps) ([],Map.empty)
   where showall [] = []
         showall (y:ys) = shows y . (' ':) $ showall ys
 op_mean [List xs] = let (n,[s]) = (length xs,op_sum [List xs]) in fst $ calc (show s ++ " " ++ show n ++ " /") ([],Map.empty)
+-}
 op_concat [List   b,List   a] = [List   $ a ++ b]
 op_concat [String b,String a] = [String $ a ++ b]
 op_addhead [List xs, x] = [List $ x : xs]
@@ -275,7 +304,7 @@ mathfct f [a] = case a of
           Sqrt -> sqrt
 
 operators :: Map.Map String Operator
-operators   = Map.fromList $ op_stack ++ op_math ++ op_fct ++ op_logic ++ op_test ++ op_list ++ cst ++ op_abstract ++ op_unit
+operators   = Map.fromList $ op_stack ++ op_math ++ op_fct ++ op_logic ++ op_test ++ op_list ++ cst {-++ op_abstract-} ++ op_unit
 cst         = [("pi", (0,1,\_ -> [Real pi], "Pi constant"))]
 op_list     = [("++", (2,1,op_concat, "Concatenate two lists")),
                (":", (2,1,op_addhead, "Add an element at the head of a list")),
@@ -287,9 +316,9 @@ op_list     = [("++", (2,1,op_concat, "Concatenate two lists")),
                ("init", (1,1,op_init, "First elements of a list")),
                ("drop", (2,1,op_drop, "Drop the first n elements from a list")),
                ("take", (2,1,op_take, "Take the first n elements from a list")),
-               ("range", (2,1,op_range, "Creates a range of numbers")),
-               ("sum", (1,1,op_sum, "Sum all elements in a list")),
-               ("mean", (1,1,op_mean, "Computes the mean value of a list"))]
+               ("range", (2,1,op_range, "Creates a range of numbers"))]
+--               ("sum", (1,1,op_sum, "Sum all elements in a list")),
+--               ("mean", (1,1,op_mean, "Computes the mean value of a list"))]
 op_stack    = [("swap", (2,2,op_swap, "Swap the first two elements on the stack")),
                ("del", (1,0,op_del, "Remove the first element from the stack")),
                ("dup", (1,2,op_dup, "Duplicate the first stack element")),
@@ -327,6 +356,7 @@ op_test     = [("==", (2,1,test_eq, "Equality test")),
                ("/=", (2,1,test_ne, "Difference test")),
                ("<=", (2,1,test_le, "Inequality test, true if second <= first")),
                (">=", (2,1,test_ge, "Inequality test, true if second >= first"))]
+{-
 op_abstract = [("solve", (1,1,abs_solve, "Simple solver"))]
 
 abs_solve [String eq] = case parse $ rmquotes eq of
@@ -334,3 +364,4 @@ abs_solve [String eq] = case parse $ rmquotes eq of
   Just [a, [_], "*", b, "-"] -> let expr = b ++ " " ++ a ++ " /"   in fst $ calc expr ([],Map.empty)
   Nothing -> [String "no parse", String eq]
   _ -> [String $ "invalid/unsolvable equation: " ++ eq, String eq]
+-}

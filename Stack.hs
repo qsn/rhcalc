@@ -1,17 +1,42 @@
 module Stack
   (
-    Symbol(Int, Frac, Real, Bool, Variable, String, List)
+    Symbol(..)
   , Stack
+  , Memory
+  , Context
+  , CalcError(..)
+  , pop
+  , push
   , tonum
   , dumpstack
+  , stringToSymbol
+  , symbolToString
+  , symbolToString'
+  , maybeToCalcError
   )
   where
+
+import Control.Monad.Error
+import Control.Monad.State
+import qualified Data.Map as Map
 
 import Data.Char
 import Data.List
 
 data Symbol = Int Integer | Frac (Integer,Integer) | Real Double | Bool Bool | Variable Char | String String | List [Symbol]
 type Stack  = [Symbol]
+type Memory = Map.Map String Symbol
+type Context = (Stack, Memory)
+
+data CalcError = ParseError String
+               | TypeMismatch String
+               | EmptyStack
+               | OtherError String
+               deriving (Show)
+
+instance Error CalcError where
+  noMsg = OtherError "Unknown error"
+  strMsg s = OtherError s
 
 instance Eq Symbol where
   (==) (Int n) (Int n') = n == n'
@@ -88,3 +113,35 @@ tonum (Frac (n,d)) = (fromIntegral n)/(fromIntegral d)
 tonum (Real x)     = x
 tonum (Bool True)  = 1
 tonum (Bool False) = 0
+
+-- push a Symbol to the stack
+-- never fails
+push :: Symbol -> ErrorT CalcError (State Context) ()
+push x = state $ \(xs, ys) -> ((), (x:xs, ys))
+
+-- pop a Symbol from the stack
+-- fails if the stack is empty
+pop :: ErrorT CalcError (State Context) Symbol
+pop = do
+  u <- get
+  if null $ fst u
+    then throwError EmptyStack
+    else do
+      modify h
+      return $ head $ fst u
+        where h (xs,ys) = (tail xs, ys)
+
+stringToSymbol :: String -> Symbol
+stringToSymbol x = case reads x :: [(Symbol, String)] of
+  [(a, "")] -> a
+  _ -> String x
+
+symbolToString = eitherToMaybe . symbolToString'
+symbolToString' (String s) = return s
+symbolToString' _ = Left $ TypeMismatch "String"
+eitherToMaybe (Right a) = Just a
+eitherToMaybe (Left  b) = Nothing
+eitherToMplus (Right a) = return a
+eitherToMplus (Left b)  = mzero
+maybeToCalcError (Just x) = Right x
+maybeToCalcError Nothing  = Left $ OtherError "Unknown error"

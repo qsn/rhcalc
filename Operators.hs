@@ -224,12 +224,12 @@ op_upper [String a] = [String $ map toUpper a]
 op_lower [String a] = [String $ map toLower a]
 
 -- lists
-{-
-op_sum [List xs] = let (n,ns,ps) = (length xs,showall xs,concat $ replicate (n-1) "+ ") in fst $ calc (ns ++ ps) ([],Map.empty)
-  where showall [] = []
-        showall (y:ys) = shows y . (' ':) $ showall ys
-op_mean [List xs] = let (n,[s]) = (length xs,op_sum [List xs]) in fst $ calc (show s ++ " " ++ show n ++ " /") ([],Map.empty)
--}
+op_sum [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in h $ calc ps $ contextFromStack xs
+  where h (Left err, _) = [String $ show err]
+        h (Right _, ctx) = fst ctx
+op_mean [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in h $ calc (ps ++ show n ++ " /") $ contextFromStack xs
+  where h (Left err, _) = [String $ show err]
+        h (Right _, ctx) = fst ctx
 op_concat [List   b,List   a] = [List   $ a ++ b]
 op_concat [String b,String a] = [String $ a ++ b]
 op_addhead [List xs, x] = [List $ x : xs]
@@ -316,9 +316,9 @@ op_list     = [("++", (2,1,op_concat, "Concatenate two lists")),
                ("init", (1,1,op_init, "First elements of a list")),
                ("drop", (2,1,op_drop, "Drop the first n elements from a list")),
                ("take", (2,1,op_take, "Take the first n elements from a list")),
-               ("range", (2,1,op_range, "Creates a range of numbers"))]
---               ("sum", (1,1,op_sum, "Sum all elements in a list")),
---               ("mean", (1,1,op_mean, "Computes the mean value of a list"))]
+               ("range", (2,1,op_range, "Creates a range of numbers")),
+               ("sum", (1,1,op_sum, "Sum all elements in a list")),
+               ("mean", (1,1,op_mean, "Computes the mean value of a list"))]
 op_stack    = [("swap", (2,2,op_swap, "Swap the first two elements on the stack")),
                ("del", (1,0,op_del, "Remove the first element from the stack")),
                ("dup", (1,2,op_dup, "Duplicate the first stack element")),

@@ -333,6 +333,7 @@ op_math     = [("n", (1,1,op_neg, "Changes the sign of the first stack element")
                ("-", (2,1,op_min, "Substracts the first element from the second")),
                ("*", (2,1,op_mult, "Multiplies the first two elements")),
                ("/", (2,1,op_div, "Divides the second element by the first")),
+               ("%", (2,1,op_mod, "Remainder of the division of the second element by the first")),
                ("^", (2,1,op_pow, "Elevates the second element to the first")),
                ("inv", (1,1,op_inv, "Inverses the first element on the stack")),
                ("num", (1,1,op_num, "Replaces the first element by its numerical value")),

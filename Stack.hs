@@ -16,6 +16,8 @@ module Stack
   , defaultSettings
   , ctxBase
   , setCtxBase
+  , modCtxStack
+  , modCtxMemory
   )
   where
 
@@ -43,6 +45,12 @@ ctxBase = setBase . ctxSettings
 setCtxBase :: Base -> Context -> Context
 setCtxBase b ctx = let settings = ctxSettings ctx
                    in ctx { ctxSettings = settings { setBase = b } }
+
+modCtxStack :: (Stack -> Stack) -> Context -> Context
+modCtxStack f ctx = ctx { ctxStack = f (ctxStack ctx) }
+
+modCtxMemory :: (Memory -> Memory) -> Context -> Context
+modCtxMemory f ctx = ctx { ctxMemory = f (ctxMemory ctx) }
 
 data CalcError = ParseError String
                | TypeMismatch String
@@ -150,7 +158,7 @@ tonum (Bool False) = 0
 -- push a Symbol to the stack
 -- never fails
 push :: Symbol -> ErrorT CalcError (State Context) ()
-push x = modify $ \ctx -> ctx { ctxStack = x : ctxStack ctx }
+push x = modify $ modCtxStack (x:)
 
 -- pop a Symbol from the stack
 -- fails if the stack is empty

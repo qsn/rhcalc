@@ -54,7 +54,7 @@ fct_clear :: CoreFct
 fct_clear = do
   name <- pop
   ifString name $ \n -> let name = rmquotes n
-                        in modify $ \ctx -> ctx { ctxMemory = Map.delete name $ ctxMemory ctx }
+                        in modify $ modCtxMemory (Map.delete name)
 
 -- store a variable
 -- name (String) at the top of the stack ; contents (any type) as the next value
@@ -66,12 +66,15 @@ fct_store = do
     let name = rmquotes n
     v <- lift . findvar $ n
     if isJust v
-      then modify $ \ctx -> ctx { ctxMemory = Map.update (\_ -> Just value) name $ ctxMemory ctx }
-      else modify $ \ctx -> ctx { ctxMemory = Map.insert name value $ ctxMemory ctx }
+      then modify $ modCtxMemory (Map.update (\_ -> Just value) name)
+      else modify $ modCtxMemory (Map.insert name value)
 
 -- push all variable bindings to the stack
 fct_showvars :: CoreFct
-fct_showvars = modify $ \ctx -> ctx { ctxStack = (String . show . Map.toList $ ctxMemory ctx) : ctxStack ctx }
+fct_showvars = do
+  ctx <- get
+  push $ showvars (ctxMemory ctx)
+  where showvars = String . show . Map.toList
 
 fct_base :: CoreFct
 fct_base = do
@@ -79,7 +82,10 @@ fct_base = do
   ifInt base $ \b -> modify $ \ctx -> setCtxBase (Base (fromInteger b)) ctx
 
 fct_showsettings :: CoreFct
-fct_showsettings = modify $ \ctx -> ctx { ctxStack = (String . show $ ctxSettings ctx) : ctxStack ctx }
+fct_showsettings = do
+  ctx <- get
+  push $ showsettings (ctxSettings ctx)
+  where showsettings = String . show
 
 -- run the script (String) at the top of the stack
 fct_run :: CoreFct
@@ -96,7 +102,9 @@ fct_run = do
 
 -- fetch the variable with the given name
 findvar :: String -> State Context (Maybe Symbol)
-findvar name = state $ \ctx -> (Map.lookup name $ ctxMemory ctx, ctx)
+findvar name = do
+  ctx <- get
+  return $ Map.lookup name $ ctxMemory ctx
 
 
 --

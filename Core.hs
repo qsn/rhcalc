@@ -21,7 +21,7 @@ type CoreFct = ErrorT CalcError (State Context) ()
 
 
 contextFromStack :: Stack -> Context
-contextFromStack s = Context { ctxStack = s, ctxMemory = Map.empty }
+contextFromStack s = Context { ctxStack = s, ctxMemory = Map.empty, ctxSettings = defaultSettings }
 
 st_dft = contextFromStack [] :: Context
 
@@ -34,6 +34,8 @@ functions = Map.fromList [("store", fct_store),
                           ("cls", fct_clearstack),
                           ("clearall", fct_clearall),
                           ("vars", fct_showvars),
+                          ("base", fct_base),
+                          ("settings", fct_showsettings),
                           ("run", fct_run)]
 
 findfct :: String -> Maybe CoreFct
@@ -70,6 +72,14 @@ fct_store = do
 -- push all variable bindings to the stack
 fct_showvars :: CoreFct
 fct_showvars = modify $ \ctx -> ctx { ctxStack = (String . show . Map.toList $ ctxMemory ctx) : ctxStack ctx }
+
+fct_base :: CoreFct
+fct_base = do
+  base <- pop
+  ifInt base $ \b -> modify $ \ctx -> setCtxBase (Base (fromInteger b)) ctx
+
+fct_showsettings :: CoreFct
+fct_showsettings = modify $ \ctx -> ctx { ctxStack = (String . show $ ctxSettings ctx) : ctxStack ctx }
 
 -- run the script (String) at the top of the stack
 fct_run :: CoreFct
@@ -114,6 +124,8 @@ run x = do
 ifString (String s) action = action s
 ifString _ _ = throwError $ TypeMismatch "String"
 
+ifInt (Int i) action = action i
+ifInt _ _ = throwError $ TypeMismatch "Int"
 
 -- main evaluator
 calc :: String -> Context -> (Either CalcError (), Context)

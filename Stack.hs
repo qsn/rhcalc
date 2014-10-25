@@ -3,6 +3,7 @@ module Stack
     Symbol(..)
   , Stack
   , Context(..)
+  , Base(Base)
   , CalcError(..)
   , pop
   , push
@@ -12,6 +13,9 @@ module Stack
   , symbolToString
   , symbolToString'
   , maybeToCalcError
+  , defaultSettings
+  , ctxBase
+  , setCtxBase
   )
   where
 
@@ -21,17 +25,41 @@ import qualified Data.Map as Map
 
 import Data.Char
 import Data.List
+import Numeric (showIntAtBase)
 
 data Symbol = Int Integer | Frac (Integer,Integer) | Real Double | Bool Bool | Variable Char | String String | List [Symbol]
 type Stack  = [Symbol]
 type Memory = Map.Map String Symbol
-data Context = Context { ctxStack :: Stack, ctxMemory :: Memory }
+data AngleUnit = Rad | Deg deriving (Show,Eq)
+newtype Base = Base Int deriving (Eq)
+data Settings = Settings { setBase :: Base, setAngle :: AngleUnit }
+data Context = Context { ctxStack :: Stack, ctxMemory :: Memory, ctxSettings :: Settings }
+
+defaultSettings = Settings { setBase = Base 10, setAngle = Rad }
+
+ctxBase :: Context -> Base
+ctxBase = setBase . ctxSettings
+
+setCtxBase :: Base -> Context -> Context
+setCtxBase b ctx = let settings = ctxSettings ctx
+                   in ctx { ctxSettings = settings { setBase = b } }
 
 data CalcError = ParseError String
                | TypeMismatch String
                | EmptyStack
                | OtherError String
                deriving (Show)
+
+instance Show Base where
+  showsPrec _ (Base b) = case b of
+    2  -> ("Binary" ++)
+    8  -> ("Octal" ++)
+    10 -> ("Decimal" ++)
+    16 -> ("Hex" ++)
+    _  -> ("Base " ++) . (show b ++)
+
+instance Show Settings where
+  showsPrec _ s = shows (setBase s) . (' ':) . shows (setAngle s)
 
 instance Error CalcError where
   noMsg = OtherError "Unknown error"
@@ -96,12 +124,17 @@ instance Read Symbol where
           read_list = reads s :: [([Symbol],String)]
           read_var  = if length s == 1 && isUpper (head s) then [(head s, [])] else []
 
-dumpstack :: Stack -> String
-dumpstack ys
+dumpstack :: Base -> Stack -> String
+dumpstack base ys
   | len > 5   = '(' : show (len - 4) ++ " more on the stack)\n" ++ dump 4 ys
   | otherwise = dump 5 ys
   where len = length ys
-        dump n ys = foldr ($) "" . reverse $ zipWith (\n y -> shows n . (':':) . (' ':) . shows y . ('\n':)) [1..n] ys
+        dump n ys = foldr ($) "" . reverse $ zipWith (\n y -> shows n . (':':) . (' ':) . showsSymbol y . ('\n':)) [1..n] ys
+        showsSymbol s = case base of
+          Base 10 -> shows s
+          Base b  -> case s of
+            Int i -> showIntAtBase (fromIntegral b) intToDigit i
+            _     -> shows s
 
 peek :: Stack -> String
 peek ys = show $ head ys

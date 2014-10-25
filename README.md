@@ -132,3 +132,22 @@ You can look at the state of the memory with `vars`:
 `vars` -> `[("addfive","5 +"),("answer",42)]`
 
 The memory is lost when you exit rhcalc.
+
+"
+
+Settings
+--------
+rhcalc supports a base setting to display integers on the stack in other bases (hexadecimal, binary, octal, or other bases you fancy).
+
+`16 base` sets the base to 16 (hexadecimal), and `10 base` sets it back to decimal.
+
+The `settings` command shows the current settings:
+```
+% settings
+1: Decimal Rad
+% 16 base
+1: Decimal Rad
+% settings
+2: Decimal Rad
+1: Hex Rad
+```

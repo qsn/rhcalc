@@ -21,9 +21,9 @@ type CoreFct = ErrorT CalcError (State Context) ()
 
 
 contextFromStack :: Stack -> Context
-contextFromStack s = (s, Map.empty)
+contextFromStack s = Context { ctxStack = s, ctxMemory = Map.empty }
 
-st_dft = ([],Map.empty) :: Context
+st_dft = contextFromStack [] :: Context
 
 --
 -- basic functions
@@ -41,17 +41,18 @@ findfct name = Map.lookup name functions
 
 -- empty the stack
 fct_clearstack :: CoreFct
-fct_clearstack = modify $ \(_, ys) -> ([], ys)
+fct_clearstack = modify $ \ctx -> ctx { ctxStack = [] }
 
 -- clear all variable bindings
 fct_clearall :: CoreFct
-fct_clearall = modify $ \(xs, _) -> (xs, Map.empty)
+fct_clearall = modify $ \ctx -> ctx { ctxMemory = Map.empty }
 
 -- clear a variable binding with the name at the top of the stack
 fct_clear :: CoreFct
 fct_clear = do
   name <- pop
-  ifString name $ \n -> let name = rmquotes n in modify $ \(xs,ys) -> (xs, Map.delete name ys)
+  ifString name $ \n -> let name = rmquotes n
+                        in modify $ \ctx -> ctx { ctxMemory = Map.delete name $ ctxMemory ctx }
 
 -- store a variable
 -- name (String) at the top of the stack ; contents (any type) as the next value
@@ -63,12 +64,12 @@ fct_store = do
     let name = rmquotes n
     v <- lift . findvar $ n
     if isJust v
-      then modify $ \(xs,ys) -> (xs, Map.update (\_ -> Just value) name ys)
-      else modify $ \(xs,ys) -> (xs, Map.insert name value ys)
+      then modify $ \ctx -> ctx { ctxMemory = Map.update (\_ -> Just value) name $ ctxMemory ctx }
+      else modify $ \ctx -> ctx { ctxMemory = Map.insert name value $ ctxMemory ctx }
 
 -- push all variable bindings to the stack
 fct_showvars :: CoreFct
-fct_showvars = modify $ \(xs,ys) -> ((String $ show $ Map.toList ys) : xs, ys)
+fct_showvars = modify $ \ctx -> ctx { ctxStack = (String . show . Map.toList $ ctxMemory ctx) : ctxStack ctx }
 
 -- run the script (String) at the top of the stack
 fct_run :: CoreFct
@@ -84,8 +85,8 @@ fct_run = do
 --
 
 -- fetch the variable with the given name
-findvar :: String -> State (Stack,Memory) (Maybe Symbol)
-findvar name = state $ \(xs,ys) -> (Map.lookup name ys, (xs,ys))
+findvar :: String -> State Context (Maybe Symbol)
+findvar name = state $ \ctx -> (Map.lookup name $ ctxMemory ctx, ctx)
 
 
 --
@@ -116,9 +117,9 @@ ifString _ _ = throwError $ TypeMismatch "String"
 
 -- main evaluator
 calc :: String -> Context -> (Either CalcError (), Context)
-calc args x = case parse args of
-  Left e -> (Left e, x)
-  Right s -> runState (runErrorT $ mapM_ run s) x
+calc args ctx = case parse args of
+  Left e -> (Left e, ctx)
+  Right s -> runState (runErrorT $ mapM_ run s) ctx
 
 eval :: ErrorT CalcError (State Context) a -> Context -> (Either CalcError a, Context)
 eval f s = runState (runErrorT f) s

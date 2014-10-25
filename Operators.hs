@@ -12,7 +12,7 @@ import Data.List
 import Data.Maybe
 import qualified Data.Map as Map
 
-import Stack (Symbol(Int, Frac, Real, Bool, Variable, String, List), Stack, CalcError(OtherError), tonum)
+import Stack (Symbol(Int, Frac, Real, Bool, Variable, String, List), Stack, Context(..), CalcError(OtherError), tonum)
 import {-# SOURCE #-} Core  (calc, st_dft, contextFromStack, CoreFct)
 
 type HelpString = String
@@ -43,7 +43,7 @@ run (argc,rc,f,_) ys
 
 findoperator :: String -> Maybe CoreFct
 findoperator name = wrap <$> Map.lookup name operators
-  where wrap op = state $ \(xs,ys) -> ((), (run op xs, ys))
+  where wrap op = modify $ \ctx -> ctx { ctxStack = run op $ ctxStack ctx }
 
 op_neg :: Fct
 op_neg [a] = case a of
@@ -218,7 +218,7 @@ op_unit = [("convert",(3,1,unit_convert, "Unit converter"))]
 runscript :: String -> Stack -> Either CalcError Stack
 runscript script stack = h $ calc script $ contextFromStack stack
   where h (Left err, _) = Left err
-        h (Right _, ctx) = Right $ fst ctx
+        h (Right _, ctx) = Right $ ctxStack ctx
 
 eitherToStack :: Either CalcError Stack -> Stack
 eitherToStack (Left err) = [String $ show err]

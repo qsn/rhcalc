@@ -7,14 +7,14 @@ import qualified Data.Map as Map
 import Data.Maybe (isJust,fromJust)
 import Control.Monad (when)
 
-import Stack (dumpstack, CalcError, Context)
+import Stack (dumpstack, CalcError, Context(..))
 import Core  (calc, st_dft)
 
 -- interactive mode, console, main loop
 -- C-d and "exit" quit
 calc_main :: Context -> Maybe CalcError -> IO ()
-calc_main ctx@(xs,ys) err = do
-  putStr $ dumpstack xs
+calc_main ctx err = do
+  putStr $ dumpstack (ctxStack ctx)
   printError err
   maybeLine <- readline "% "
   ((ctx', err'), c) <- case maybeLine of
@@ -38,8 +38,8 @@ printResult :: (Either CalcError a, Context) -> IO a
 printResult (Left err, _) = do
   putStrLn $ show err
   exitFailure
-printResult (Right _, (xs,_)) = do
-  putStr $ dumpstack xs
+printResult (Right _, ctx) = do
+  putStr $ dumpstack (ctxStack ctx)
   exitSuccess
 
 -- standard mode: console, interactive

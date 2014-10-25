@@ -2,8 +2,7 @@ module Stack
   (
     Symbol(..)
   , Stack
-  , Memory
-  , Context
+  , Context(..)
   , CalcError(..)
   , pop
   , push
@@ -26,7 +25,7 @@ import Data.List
 data Symbol = Int Integer | Frac (Integer,Integer) | Real Double | Bool Bool | Variable Char | String String | List [Symbol]
 type Stack  = [Symbol]
 type Memory = Map.Map String Symbol
-type Context = (Stack, Memory)
+data Context = Context { ctxStack :: Stack, ctxMemory :: Memory }
 
 data CalcError = ParseError String
                | TypeMismatch String
@@ -114,22 +113,24 @@ tonum (Real x)     = x
 tonum (Bool True)  = 1
 tonum (Bool False) = 0
 
+
 -- push a Symbol to the stack
 -- never fails
 push :: Symbol -> ErrorT CalcError (State Context) ()
-push x = modify $ \(xs, ys) -> (x:xs, ys)
+push x = modify $ \ctx -> ctx { ctxStack = x : ctxStack ctx }
 
 -- pop a Symbol from the stack
 -- fails if the stack is empty
 pop :: ErrorT CalcError (State Context) Symbol
 pop = do
-  u <- get
-  if null $ fst u
+  ctx <- get
+  if null $ ctxStack ctx
     then throwError EmptyStack
     else do
-      modify h
-      return $ head $ fst u
-        where h (xs,ys) = (tail xs, ys)
+      let (x:xs) = ctxStack ctx
+      put $ ctx { ctxStack = xs }
+      return x
+
 
 stringToSymbol :: String -> Symbol
 stringToSymbol x = case reads x :: [(Symbol, String)] of

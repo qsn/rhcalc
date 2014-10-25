@@ -117,7 +117,7 @@ tonum (Bool False) = 0
 -- push a Symbol to the stack
 -- never fails
 push :: Symbol -> ErrorT CalcError (State Context) ()
-push x = state $ \(xs, ys) -> ((), (x:xs, ys))
+push x = modify $ \(xs, ys) -> (x:xs, ys)
 
 -- pop a Symbol from the stack
 -- fails if the stack is empty

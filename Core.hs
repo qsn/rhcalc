@@ -41,17 +41,17 @@ findfct name = Map.lookup name functions
 
 -- empty the stack
 fct_clearstack :: CoreFct
-fct_clearstack = state $ \(_, ys) -> ((), ([], ys))
+fct_clearstack = modify $ \(_, ys) -> ([], ys)
 
 -- clear all variable bindings
 fct_clearall :: CoreFct
-fct_clearall = state $ \(xs, _) -> ((), (xs, Map.empty))
+fct_clearall = modify $ \(xs, _) -> (xs, Map.empty)
 
 -- clear a variable binding with the name at the top of the stack
 fct_clear :: CoreFct
 fct_clear = do
   name <- pop
-  ifString name $ \n -> let name = rmquotes n in state $ \(xs,ys) -> ((), (xs, Map.delete name ys))
+  ifString name $ \n -> let name = rmquotes n in modify $ \(xs,ys) -> (xs, Map.delete name ys)
 
 -- store a variable
 -- name (String) at the top of the stack ; contents (any type) as the next value
@@ -63,12 +63,12 @@ fct_store = do
     let name = rmquotes n
     v <- lift . findvar $ n
     if isJust v
-      then state $ \(xs,ys) -> ((), (xs, Map.update (\_ -> Just value) name ys))
-      else state $ \(xs,ys) -> ((), (xs, Map.insert name value ys))
+      then modify $ \(xs,ys) -> (xs, Map.update (\_ -> Just value) name ys)
+      else modify $ \(xs,ys) -> (xs, Map.insert name value ys)
 
 -- push all variable bindings to the stack
 fct_showvars :: CoreFct
-fct_showvars = state $ \(xs,ys) -> ((), ((String $ show $ Map.toList ys) : xs, ys))
+fct_showvars = modify $ \(xs,ys) -> ((String $ show $ Map.toList ys) : xs, ys)
 
 -- run the script (String) at the top of the stack
 fct_run :: CoreFct

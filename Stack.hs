@@ -9,10 +9,6 @@ module Stack
   , push
   , tonum
   , dumpstack
-  , stringToSymbol
-  , symbolToString
-  , symbolToString'
-  , maybeToCalcError
   , defaultSettings
   , ctxBase
   , setCtxBase
@@ -119,22 +115,6 @@ instance Show Symbol where
   show (Variable s) = s
   show (List xs)    = show xs
 
-instance Read Symbol where
-  readsPrec _ s
-    | not.null $ read_int  = [(Int  (fst.head $ read_int), snd.head $ read_int)]
-    | not.null $ read_frac = [(Frac (fst.head $ read_frac), snd.head $ read_frac)]
-    | not.null $ read_real = [(Real (fst.head $ read_real), snd.head $ read_real)]
-    | not.null $ read_bool = [(Bool (fst.head $ read_bool), snd.head $ read_bool)]
-    | not.null $ read_list = [(List (fst.head $ read_list), snd.head $ read_list)]
-    | not.null $ read_var = [(Variable (fst.head $ read_var), snd.head $ read_var)]
-    | otherwise            = [(String s, "")]
-    where read_int  = reads s :: [(Integer,String)]
-          read_frac = reads s :: [((Integer,Integer),String)]
-          read_real = reads s :: [(Double,String)]
-          read_bool = reads s :: [(Bool,String)]
-          read_list = reads s :: [([Symbol],String)]
-          read_var  = if length s >= 1 && isUpper (head s) then [(s, [])] else [] -- not quite right
-
 dumpstack :: Base -> Stack -> String
 dumpstack base ys
   | len > 5   = '(' : show (len - 4) ++ " more on the stack)\n" ++ dump 4 ys
@@ -175,18 +155,3 @@ pop = do
       put $ ctx { ctxStack = xs }
       return x
 
-
-stringToSymbol :: String -> Symbol
-stringToSymbol x = case reads x :: [(Symbol, String)] of
-  [(a, "")] -> a
-  _ -> String x
-
-symbolToString = eitherToMaybe . symbolToString'
-symbolToString' (String s) = return s
-symbolToString' _ = Left $ TypeMismatch "String"
-eitherToMaybe (Right a) = Just a
-eitherToMaybe (Left  b) = Nothing
-eitherToMplus (Right a) = return a
-eitherToMplus (Left b)  = mzero
-maybeToCalcError (Just x) = Right x
-maybeToCalcError Nothing  = Left $ OtherError "Unknown error"

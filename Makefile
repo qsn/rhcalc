@@ -11,3 +11,5 @@ clean:
 check:
 	@echo -n "Looking for readline... "
 	@((ghc-pkg list | grep readline > /dev/null) && echo "found") || echo "not found"
+	@echo -n "Looking for parsec... "
+	@((ghc-pkg list | grep '\sparsec' > /dev/null) && echo "found") || echo "not found"

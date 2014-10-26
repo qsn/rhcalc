@@ -25,11 +25,13 @@ import Control.Monad.Error
 import Control.Monad.State
 import qualified Data.Map as Map
 
+import Text.ParserCombinators.Parsec.Error as PE (ParseError)
+
 import Data.Char
 import Data.List
 import Numeric (showIntAtBase)
 
-data Symbol = Int Integer | Frac (Integer,Integer) | Real Double | Bool Bool | Variable Char | String String | List [Symbol]
+data Symbol = Int Integer | Frac (Integer,Integer) | Real Double | Bool Bool | Variable String | String String | List [Symbol]
 type Stack  = [Symbol]
 type Memory = Map.Map String Symbol
 data AngleUnit = Rad | Deg deriving (Show,Eq)
@@ -53,6 +55,7 @@ modCtxMemory :: (Memory -> Memory) -> Context -> Context
 modCtxMemory f ctx = ctx { ctxMemory = f (ctxMemory ctx) }
 
 data CalcError = ParseError String
+               | ParsecError (PE.ParseError)
                | TypeMismatch String
                | EmptyStack
                | OtherError String
@@ -113,7 +116,7 @@ instance Show Symbol where
   show (Real x)     = show x
   show (Bool b)     = show b
   show (String s)   = s
-  show (Variable c) = [c]
+  show (Variable s) = s
   show (List xs)    = show xs
 
 instance Read Symbol where
@@ -130,7 +133,7 @@ instance Read Symbol where
           read_real = reads s :: [(Double,String)]
           read_bool = reads s :: [(Bool,String)]
           read_list = reads s :: [([Symbol],String)]
-          read_var  = if length s == 1 && isUpper (head s) then [(head s, [])] else []
+          read_var  = if length s >= 1 && isUpper (head s) then [(s, [])] else [] -- not quite right
 
 dumpstack :: Base -> Stack -> String
 dumpstack base ys

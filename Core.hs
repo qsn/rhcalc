@@ -16,6 +16,7 @@ import Data.Maybe
 --import {-# SOURCE #-} Operators
 import Operators
 import Stack
+import Parser (parse)
 
 type CoreFct = ErrorT CalcError (State Context) ()
 
@@ -92,7 +93,7 @@ fct_run :: CoreFct
 fct_run = do
   script <- pop
   ifString script $ \s -> do
-    case parse $ rmquotes s of
+    case parse s of
       Left e -> throwError e
       Right xs -> mapM_ run xs
 
@@ -115,16 +116,16 @@ findvar name = do
 --  - try to evaluate a function
 --  - try to find a variable with this name
 --  - push the associated symbol to the stack
-run :: String -> ErrorT CalcError (State Context) ()
-run x = do
-  let s = stringToSymbol x
+run :: Symbol -> ErrorT CalcError (State Context) ()
+run s = do
   case s of
-    String _ -> do
+    String x -> do
       f' <- do -- try to find a variable with name x, return Nothing or an action that pushes the variable's value to the stack
         v <- lift . findvar $ x
         return $ liftM push v
       fromJust $ msum [findfct x, findoperator x, f', Just $ push s]
     _ -> push s
+
 
 -- if the Symbol is a String, run the action, using the contents of the string as argument
 -- otherwise, throw an error
@@ -143,22 +144,6 @@ calc args ctx = case parse args of
 
 eval :: ErrorT CalcError (State Context) a -> Context -> (Either CalcError a, Context)
 eval f s = runState (runErrorT f) s
-
-parse :: String -> Either CalcError [String]
-parse = glue [] (0,0)
-  where glue [] (0,0) [] = return [] -- reached the end of the input and all blocks are closed? good parse
-        glue xs (0,0) [] = return [reverse xs]
-        glue [] (0,0) (' ':ys) = glue [] (0,0) ys -- skip extra spaces between arguments
-        glue xs (0,0) (' ':ys) = (:) <$> pure (reverse xs) <*> glue [] (0,0) ys
-        glue xs (a,b) (y:ys)
-          | a' < 0    = throwError $ ParseError "Mismatched blocks"    -- a block has been closed that hadn't been opened before? no parse
-          | otherwise = glue (y : xs) (a',b') ys
-          where (a',b') = case y of
-                  '(' -> (a+1, b)
-                  ')' -> (a-1, b)
-                  '"' -> (a  , 1-b)
-                  _   -> (a  , b)
-        glue _    _   [] = throwError $ ParseError "Mismatched blocks" -- reached the end of the input without closing all blocks? no parse
 
 -- removes first and final quote, if present
 rmquotes :: String -> String

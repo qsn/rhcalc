@@ -6,7 +6,7 @@ module Operators
 
 import Control.Applicative
 import Control.Monad.State
-import Control.Monad.Error
+import Control.Monad.Trans.Except
 import Data.Bits
 import Data.Char
 import Data.List

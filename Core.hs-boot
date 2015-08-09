@@ -1,11 +1,11 @@
 module Core where
 
 import Control.Monad.State
-import Control.Monad.Error
+import Control.Monad.Trans.Except
 
 import Stack
 
 contextFromStack :: Stack -> Context
 st_dft :: Context
 calc :: String -> Context -> (Either CalcError (), Context)
-type CoreFct = ErrorT CalcError (State Context) ()
+type CoreFct = ExceptT CalcError (State Context) ()

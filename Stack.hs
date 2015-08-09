@@ -17,7 +17,8 @@ module Stack
   )
   where
 
-import Control.Monad.Error
+import Control.Monad.Error.Class
+import Control.Monad.Trans.Except
 import Control.Monad.State
 import qualified Data.Map as Map
 
@@ -140,12 +141,12 @@ tonum (Bool False) = 0
 
 -- push a Symbol to the stack
 -- never fails
-push :: Symbol -> ErrorT CalcError (State Context) ()
+push :: Symbol -> ExceptT CalcError (State Context) ()
 push x = modify $ modCtxStack (x:)
 
 -- pop a Symbol from the stack
 -- fails if the stack is empty
-pop :: ErrorT CalcError (State Context) Symbol
+pop :: ExceptT CalcError (State Context) Symbol
 pop = do
   ctx <- get
   if null $ ctxStack ctx

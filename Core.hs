@@ -10,7 +10,8 @@ module Core
 
 import Control.Applicative
 import Control.Monad.State
-import Control.Monad.Error
+import Control.Monad.Error.Class
+import Control.Monad.Trans.Except
 import qualified Data.Map as Map
 import Data.Maybe
 
@@ -19,7 +20,7 @@ import Operators
 import Stack
 import Parser (parse)
 
-type CoreFct = ErrorT CalcError (State Context) ()
+type CoreFct = ExceptT CalcError (State Context) ()
 
 
 contextFromStack :: Stack -> Context
@@ -117,7 +118,7 @@ findvar name = do
 --  - try to evaluate a function
 --  - try to find a variable with this name
 --  - push the associated symbol to the stack
-run :: Symbol -> ErrorT CalcError (State Context) ()
+run :: Symbol -> ExceptT CalcError (State Context) ()
 run s = do
   case s of
     String x -> do
@@ -141,10 +142,10 @@ ifInt _ _ = throwError $ TypeMismatch "Int"
 calc :: String -> Context -> (Either CalcError (), Context)
 calc args ctx = case parse args of
   Left e -> (Left e, ctx)
-  Right s -> runState (runErrorT $ mapM_ run s) ctx
+  Right s -> runState (runExceptT $ mapM_ run s) ctx
 
-eval :: ErrorT CalcError (State Context) a -> Context -> (Either CalcError a, Context)
-eval f s = runState (runErrorT f) s
+eval :: ExceptT CalcError (State Context) a -> Context -> (Either CalcError a, Context)
+eval f s = runState (runExceptT f) s
 
 -- removes first and final quote, if present
 rmquotes :: String -> String

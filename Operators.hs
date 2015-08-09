@@ -7,6 +7,7 @@ module Operators
 import Control.Applicative
 import Control.Monad.State
 import Control.Monad.Error
+import Data.Bits
 import Data.Char
 import Data.List
 import Data.Maybe
@@ -274,8 +275,11 @@ op_type [a]   = case a of
 
 -- logic/boolean operators
 logic_and [Bool a, Bool b] = [Bool $ a && b]
+logic_and [Int a,  Int b]  = [Int  $ a .&. b]
 logic_or  [Bool a, Bool b] = [Bool $ a || b]
+logic_or  [Int a,  Int b]  = [Int  $ a .|. b]
 logic_xor [Bool a, Bool b] = [Bool $ (a || b) && not (a && b)]
+logic_xor [Int a,  Int b]  = [Int  $ a `xor` b]
 logic_not [Bool a]         = [Bool $ not a]
 logic_nor  = logic_not . logic_or
 logic_nand = logic_not . logic_and

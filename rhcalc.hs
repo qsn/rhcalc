@@ -19,13 +19,15 @@ do_calc_main ctx = do
     Just args   -> do
       addHistory args
       return (unwrapError $ calc args ctx, True)
-  if c then calc_main ctx' err else return ()
+  if c then calc_main (ctx, ctx') err else return ()
 
 -- interactive mode, console, main loop
 -- C-d and "exit" quit
-calc_main :: Context -> Maybe CalcError -> IO ()
-calc_main ctx err = do
-  putStr $ dumpstack (ctxBase ctx) (ctxStack ctx)
+calc_main :: (Context,Context) -> Maybe CalcError -> IO ()
+calc_main (safeCtx, ctx) err = do
+  let s = dumpstack (ctxBase ctx) (ctxStack ctx)
+  let s' = dumpstack (ctxBase safeCtx) (ctxStack safeCtx)
+  putStr $ s
   printError err
   do_calc_main ctx
 
@@ -61,4 +63,4 @@ main = do
        then do
          let expr = args !! 1
          printResult $ calc expr st_dft
-       else calc_main st_dft Nothing
+       else calc_main (st_dft,st_dft) Nothing

@@ -13,13 +13,13 @@ import Core  (calc, st_dft)
 do_calc_main :: Context -> IO ()
 do_calc_main ctx = do
   maybeLine <- readline "% "
-  ((ctx', err'), c) <- case maybeLine of
+  ((ctx', err), c) <- case maybeLine of
     Nothing     -> return ((ctx, Nothing), False)
     Just "exit" -> return ((ctx, Nothing) ,False)
     Just args   -> do
       addHistory args
       return (unwrapError $ calc args ctx, True)
-  if c then calc_main ctx' err' else return ()
+  if c then calc_main ctx' err else return ()
 
 -- interactive mode, console, main loop
 -- C-d and "exit" quit

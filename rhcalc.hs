@@ -10,12 +10,8 @@ import Control.Monad (when)
 import Stack (dumpstack, CalcError, Context(..), ctxBase)
 import Core  (calc, st_dft)
 
--- interactive mode, console, main loop
--- C-d and "exit" quit
-calc_main :: Context -> Maybe CalcError -> IO ()
-calc_main ctx err = do
-  putStr $ dumpstack (ctxBase ctx) (ctxStack ctx)
-  printError err
+do_calc_main :: Context -> IO ()
+do_calc_main ctx = do
   maybeLine <- readline "% "
   ((ctx', err'), c) <- case maybeLine of
     Nothing     -> return ((ctx, Nothing), False)
@@ -24,6 +20,14 @@ calc_main ctx err = do
       addHistory args
       return (unwrapError $ calc args ctx, True)
   if c then calc_main ctx' err' else return ()
+
+-- interactive mode, console, main loop
+-- C-d and "exit" quit
+calc_main :: Context -> Maybe CalcError -> IO ()
+calc_main ctx err = do
+  putStr $ dumpstack (ctxBase ctx) (ctxStack ctx)
+  printError err
+  do_calc_main ctx
 
 unwrapError :: (Either CalcError a, Context) -> (Context, Maybe CalcError)
 unwrapError (Left e,  ctx_error)  = (ctx_error, Just e)

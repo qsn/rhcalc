@@ -6,6 +6,7 @@ import System.Console.Readline
 import qualified Data.Map as Map
 import Data.Maybe (isJust,fromJust)
 import Control.Monad (when)
+import Control.Exception as X
 
 import Stack (dumpstack, CalcError, Context(..), ctxBase)
 import Core  (calc, st_dft)
@@ -27,9 +28,22 @@ calc_main :: (Context,Context) -> Maybe CalcError -> IO ()
 calc_main (safeCtx, ctx) err = do
   let s = dumpstack (ctxBase ctx) (ctxStack ctx)
   let s' = dumpstack (ctxBase safeCtx) (ctxStack safeCtx)
-  putStr $ s
+  newctx <- X.catch (success s ctx) (handler s' safeCtx)
   printError err
-  do_calc_main ctx
+  do_calc_main newctx
+  where success :: String -> a -> IO a
+        success s res = do
+          putStr s
+          return res
+        handler s ret e = do
+          putStr s
+          printErr e
+          return ret
+        printErr :: SomeException -> IO ()
+        printErr e =  do
+          case (fromException e) :: Maybe PatternMatchFail of
+           Just x -> putStrLn "operation not supported"
+           nothing -> return ()
 
 unwrapError :: (Either CalcError a, Context) -> (Context, Maybe CalcError)
 unwrapError (Left e,  ctx_error)  = (ctx_error, Just e)

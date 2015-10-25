@@ -125,7 +125,7 @@ dumpstack base ys
         showsSymbol s = case base of
           Base 10 -> shows s
           Base b  -> case s of
-            Int i -> showIntAtBase (fromIntegral b) intToDigit i
+            Int i -> (if i < 0 then ('-':) else id) . showIntAtBase (fromIntegral b) intToDigit (abs i)
             _     -> shows s
 
 peek :: Stack -> String

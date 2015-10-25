@@ -135,8 +135,9 @@ run s = do
 ifString (String s) action = action s
 ifString _ _ = throwError $ TypeMismatch "String"
 
-ifInt (Int i) action = action i
-ifInt _ _ = throwError $ TypeMismatch "Int"
+ifInt (Int i) action
+  | i > 1 = action i
+ifInt _ _ = throwError $ TypeMismatch "need Int >= 1"
 
 -- main evaluator
 calc :: String -> Context -> (Either CalcError (), Context)

@@ -10,6 +10,8 @@ clean:
 
 check:
 	@echo -n "Looking for readline... "
-	@((ghc-pkg list | grep readline > /dev/null) && echo "found") || echo "not found"
+	@((ghc-pkg list | grep -q '\sreadline') && echo "found") || echo "not found"
 	@echo -n "Looking for parsec... "
-	@((ghc-pkg list | grep '\sparsec' > /dev/null) && echo "found") || echo "not found"
+	@((ghc-pkg list | grep -q '\sparsec') && echo "found") || echo "not found"
+	@echo -n "Looking for mtl... "
+	@((ghc-pkg list | grep -q '\smtl') && echo "found") || echo "not found"

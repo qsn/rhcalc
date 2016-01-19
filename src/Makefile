@@ -1,9 +1,11 @@
+SRC=Core.hs Core.hs-boot Main.hs Makefile Operators.hs Parser.hs Stack.hs
+
 .PHONY: all clean check
 
 all: rhcalc
 
-rhcalc: check
-	ghc --make rhcalc
+rhcalc: check $(SRC)
+	ghc --make -o rhcalc Main
 
 clean:
 	rm -f *.o *.hi *.o-boot *.hi-boot *\~

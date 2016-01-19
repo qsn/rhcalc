@@ -5,8 +5,7 @@ rhcalc is a Reverse Polish Notation (RPN) calculator written in Haskell.
 
 Usage
 -----
-Run `ghc rhcalc` to build, then `./rhcalc`.  
-rhcalc uses `System.Console.Readline`.
+Run `cabal install` to build, then `rhcalc`.
 
 Features
 --------
@@ -20,7 +19,7 @@ Logic operations (booleans) (not, and, or, xor, nand, nor) and tests (`==`, `<`,
 * `5 8 ==` -> `False`
 * `True False xor` -> `True`
 
-Unit conversions: some common length, volume, weight, and temperature units are included. rhcalc favors exact conversions using fractions most of the time.  
+Unit conversions: some common length, volume, weight, and temperature units are included. rhcalc favors exact conversions using fractions most of the time.
 Input: [value] [unit from] [unit to] convert
 * `1 mile yd convert` -> `1760`
 * `12 inch foot convert` -> `1`
@@ -121,14 +120,14 @@ rhcalc can store values and scripts in memory.
 
 `42 answer store` stores `42` in the variable `answer`. When you type `answer` on the input, `42` is pushed on the stack.
 
-Scripts use the RPN notation and are stored in memory as strings.  
-`"5 +" addfive store` stores the script `5 +` in the variable `addfive`.  
-Scripts are executed with `run`:  
+Scripts use the RPN notation and are stored in memory as strings.
+`"5 +" addfive store` stores the script `5 +` in the variable `addfive`.
+Scripts are executed with `run`:
 `8 addfive run` -> `13`
 
 To delete a variable or a script from the memory, type its name *between* `"` and `clear`: `"addfive" clear`.
 
-You can look at the state of the memory with `vars`:  
+You can look at the state of the memory with `vars`:
 `vars` -> `[("addfive","5 +"),("answer",42)]`
 
 The memory is lost when you exit rhcalc.

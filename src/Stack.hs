@@ -17,7 +17,6 @@ module Stack
   )
   where
 
-import Control.Monad.Error.Class
 import Control.Monad.Trans.Except
 import Control.Monad.State
 import qualified Data.Map as Map
@@ -68,10 +67,6 @@ instance Show Base where
 
 instance Show Settings where
   showsPrec _ s = shows (setBase s) . (' ':) . shows (setAngle s)
-
-instance Error CalcError where
-  noMsg = OtherError "Unknown error"
-  strMsg s = OtherError s
 
 instance Eq Symbol where
   (==) (Int n) (Int n') = n == n'
@@ -150,7 +145,7 @@ pop :: ExceptT CalcError (State Context) Symbol
 pop = do
   ctx <- get
   if null $ ctxStack ctx
-    then throwError EmptyStack
+    then throwE EmptyStack
     else do
       let (x:xs) = ctxStack ctx
       put $ ctx { ctxStack = xs }

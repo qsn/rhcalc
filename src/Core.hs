@@ -10,7 +10,6 @@ module Core
 
 import Control.Applicative
 import Control.Monad.State
-import Control.Monad.Error.Class
 import Control.Monad.Trans.Except
 import qualified Data.Map as Map
 import Data.Maybe
@@ -96,7 +95,7 @@ fct_run = do
   script <- pop
   ifString script $ \s -> do
     case parse s of
-      Left e -> throwError e
+      Left e -> throwE e
       Right xs -> mapM_ run xs
 
 --
@@ -133,11 +132,11 @@ run s = do
 -- otherwise, throw an error
 --ifString :: MonadError CalcError m => Symbol -> (String -> m a) -> m a
 ifString (String s) action = action s
-ifString _ _ = throwError $ TypeMismatch "String"
+ifString _ _ = throwE $ TypeMismatch "String"
 
 ifInt (Int i) action
   | i > 1 = action i
-ifInt _ _ = throwError $ TypeMismatch "need Int >= 1"
+ifInt _ _ = throwE $ TypeMismatch "need Int >= 1"
 
 -- main evaluator
 calc :: String -> Context -> (Either CalcError (), Context)

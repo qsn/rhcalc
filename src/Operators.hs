@@ -283,6 +283,10 @@ logic_xor [Int a,  Int b]  = [Int  $ a `xor` b]
 logic_not [Bool a]         = [Bool $ not a]
 logic_nor  = logic_not . logic_or
 logic_nand = logic_not . logic_and
+logic_lshift [Int n, Int a]
+  | a >= 0 && n >= 0 = [Int $ shiftL a (fromInteger n)]
+logic_rshift [Int n, Int a]
+  | a >= 0 && n >= 0 = [Int $ shiftR a (fromInteger n)]
 
 -- comparison tests
 test_eq [b,a] = [Bool $ a == b]
@@ -355,7 +359,9 @@ op_logic    = [("and", (2,1,logic_and, "Logical AND")),
                ("xor", (2,1,logic_xor, "Logical XOR")),
                ("nand", (2,1,logic_nand, "Logical NAND")),
                ("not", (1,1,logic_not, "Logical NOT")),
-               ("nor", (2,1,logic_nor, "Logical NOR"))]
+               ("nor", (2,1,logic_nor, "Logical NOR")),
+               ("<<", (2,1,logic_lshift, "Bitwise left shift")),
+               (">>", (2,1,logic_rshift, "Bitwise right shift"))]
 op_test     = [("==", (2,1,test_eq, "Equality test")),
                ("<", (2,1,test_lt, "Inequality test, true if second < first")),
                (">", (2,1,test_gt, "Inequality test, true if second > first")),

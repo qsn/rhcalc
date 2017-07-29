@@ -5,10 +5,10 @@ module Parser
   )
   where
 
-import Stack (CalcError(ParsecError), Symbol(..))
+import Stack (CalcError(ParsecError), Symbol(String, Bool, Variable, Real, Int, List))
 
 import Text.ParserCombinators.Parsec hiding (parse)
-import qualified Text.ParserCombinators.Parsec as Parsec
+import qualified Text.ParserCombinators.Parsec as Parsec (parse)
 
 import Data.Functor ((<$>))
 import Control.Monad (when)

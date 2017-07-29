@@ -8,13 +8,15 @@ module Core
   )
   where
 
-import Control.Monad.State
-import Control.Monad.Trans.Except
+import Data.Foldable (msum)
+import Control.Monad (liftM)
+import Control.Monad.Trans (lift)
+import Control.Monad.State (State, runState, get, modify)
+import Control.Monad.Trans.Except (ExceptT, throwE, runExceptT)
 import qualified Data.Map as Map
-import Data.Maybe
+import Data.Maybe (isJust, fromJust)
 
---import {-# SOURCE #-} Operators
-import Operators
+import Operators (findoperator)
 import Stack
 import Parser (parse)
 

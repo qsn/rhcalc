@@ -4,13 +4,12 @@ module Operators
   )
   where
 
-import Control.Monad.State
-import Data.Bits
-import Data.Char
-import Data.List
+import Control.Monad.State (modify)
+import Data.Bits ((.&.), (.|.), xor, shiftL, shiftR)
+import Data.List (genericLength)
 import qualified Data.Map as Map
 
-import Stack (Symbol(Int, Frac, Real, Bool, Variable, String, List), Stack, Context(..), modCtxStack, CalcError(OtherError), tonum)
+import Stack (Symbol(Int, Frac, Real, Bool, Variable, String, List), Stack, ctxStack, modCtxStack, CalcError(OtherError), tonum)
 import {-# SOURCE #-} Core  (calc, contextFromStack, CoreFct)
 
 type HelpString = String

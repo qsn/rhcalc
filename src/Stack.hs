@@ -17,14 +17,13 @@ module Stack
   )
   where
 
-import Control.Monad.Trans.Except
-import Control.Monad.State
+import Control.Monad.Trans.Except (ExceptT, throwE)
+import Control.Monad.State (State, modify, get, put)
 import qualified Data.Map as Map
 
 import Text.ParserCombinators.Parsec.Error as PE (ParseError)
 
-import Data.Char
-import Data.List
+import Data.Char (intToDigit)
 import Numeric (showIntAtBase)
 
 data Symbol = Int Integer | Frac (Integer,Integer) | Real Double | Bool Bool | Variable String | String String | List [Symbol]

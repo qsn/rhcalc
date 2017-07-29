@@ -1,8 +1,8 @@
 --module RHCalc where
 
-import System.Exit
+import System.Exit (exitFailure, exitSuccess)
 import System.Environment (getArgs)
-import System.Console.Readline
+import System.Console.Readline (addHistory, readline)
 import qualified Control.Exception as X
 
 import Stack (dumpcontext, CalcError(OperationNotSupported), Context)

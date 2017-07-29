@@ -315,20 +315,11 @@ test_le [b,a] = [Bool $ a <= b]
 test_ge [b,a] = [Bool $ a >= b]
 
 -- math functions
-data MathFct = Cos | Sin | Tan | Exp | Log | Sqrt deriving (Show,Read)
-
-mathfct :: MathFct -> [Symbol] -> [Symbol]
+mathfct :: (Double -> Double) -> [Symbol] -> [Symbol]
 mathfct f [a] = case a of
-  Int n      -> [Real (f' $ fromIntegral n)]
-  Frac (n,d) -> [Real (f' $ (fromIntegral n)/(fromIntegral d))]
-  Real x     -> [Real (f' $ x)]
-  where f' = case f of
-          Cos  -> cos
-          Sin  -> sin
-          Tan  -> tan
-          Exp  -> exp
-          Log  -> log
-          Sqrt -> sqrt
+  Int n      -> [Real (f $ fromIntegral n)]
+  Frac (n,d) -> [Real (f $ (fromIntegral n)/(fromIntegral d))]
+  Real x     -> [Real (f $ x)]
 
 operators :: Map.Map String Operator
 operators   = Map.fromList $ op_stack ++ op_math ++ op_fct ++ op_logic ++ op_test ++ op_list ++ cst {-++ op_abstract-} ++ op_unit
@@ -367,12 +358,12 @@ op_math     = [("n", (1,1,op_neg, "Changes the sign of the first stack element")
                ("floor", (1,1,op_floor, "Rounds a numerical value to the integer immediately smaller")),
                ("ceil", (1,1,op_ceil, "Rounds a numerical value to the integer immediately larger")),
                ("abs", (1,1,op_abs, "Absolute value"))]
-op_fct      = [("cos", (1,1,mathfct Cos, "Cosine, parameter in radians")),
-               ("sin", (1,1,mathfct Sin, "Sine, parameter in radians")),
-               ("tan", (1,1,mathfct Tan, "Tangent, parameter in radians")),
-               ("exp", (1,1,mathfct Exp, "Exponential")),
-               ("log", (1,1,mathfct Log, "Logarithm (base e))")),
-               ("sqrt", (1,1,mathfct Sqrt, "Square root"))]
+op_fct      = [("cos", (1,1,mathfct cos, "Cosine, parameter in radians")),
+               ("sin", (1,1,mathfct sin, "Sine, parameter in radians")),
+               ("tan", (1,1,mathfct tan, "Tangent, parameter in radians")),
+               ("exp", (1,1,mathfct exp, "Exponential")),
+               ("log", (1,1,mathfct log, "Logarithm (base e))")),
+               ("sqrt", (1,1,mathfct sqrt, "Square root"))]
 op_logic    = [("and", (2,1,logic_and, "Logical AND")),
                ("or", (2,1,logic_or, "Logical OR")),
                ("xor", (2,1,logic_xor, "Logical XOR")),

@@ -29,7 +29,7 @@ Stack operator
 type Operator = (Int, Int, Fct, HelpString)
 
 run :: Operator -> Stack -> Stack
-run (argc,rc,f,_) ys
+run (argc,_,f,_) ys
   | length argv == n = f argv ++ zs
   where (n,ys') = case argc of 
           -1 -> (round.tonum $ head ys, tail ys) 
@@ -250,7 +250,7 @@ op_range [end,start] = case (start,end) of
 
 -- stack
 op_swap [a,b] = [b,a]
-op_del  [a]   = []
+op_del  [_]   = []
 op_dup  [a]   = [a,a]
 op_rep  [Int n,a]  = replicate (fromIntegral n) a
 op_get  xs    = last xs : init xs

@@ -93,10 +93,10 @@ instance Ord Symbol where
   compare (Frac (n,d)) (Int n')  = compare (Frac (n,d)) (Frac (n',1))
   compare (Frac (n,d)) (Frac (n',d')) = compare (n*d') (n'*d)
   compare (String s) (String s') = compare s s'
-  compare (String s) _ = undefined
-  compare _ (String s) = undefined
-  compare (Variable c) _ = undefined
-  compare _ (Variable c) = undefined
+  compare (String _) _ = undefined
+  compare _ (String _) = undefined
+  compare (Variable _) _ = undefined
+  compare _ (Variable _) = undefined
   compare (List xs) (List ys) = compare xs ys
   compare (List _)   _        = undefined
   compare   _  (List _)       = undefined

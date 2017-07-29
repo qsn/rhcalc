@@ -146,10 +146,8 @@ push x = modify $ modCtxStack (x:)
 pop :: ExceptT CalcError (State Context) Symbol
 pop = do
   ctx <- get
-  if null $ ctxStack ctx
-    then throwE EmptyStack
-    else do
-      let (x:xs) = ctxStack ctx
+  case ctxStack ctx of
+    [] -> throwE EmptyStack
+    (x:xs) -> do
       put $ ctx { ctxStack = xs }
       return x
-

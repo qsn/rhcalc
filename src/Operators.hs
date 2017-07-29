@@ -184,17 +184,17 @@ unit_scriptto   = snd.snd
 unit_convert :: Fct
 unit_convert [String to, String from, value] = case dims of
   Left err -> [String $ show err]
-  Right _  -> eitherToStack $ units >>= convert
+  Right _  -> eitherToStack $ unitPair >>= convert
   where unit_from :: Either CalcError (String, Unit)
         unit_from = unit_get from
         unit_to   :: Either CalcError (String, Unit)
         unit_to   = unit_get to
         dims :: Either CalcError (Unit, Unit)
-        dims = units >>= check_dims
+        dims = unitPair >>= check_dims
         check_dims :: ((String,Unit),(String,Unit)) -> Either CalcError (Unit,Unit)
         check_dims (a,b) = check_dimensions a b
-        units :: Either CalcError ((String,Unit),(String,Unit))
-        units = do
+        unitPair :: Either CalcError ((String,Unit),(String,Unit))
+        unitPair = do
           uf <- unit_from
           ut <- unit_to
           return (uf,ut)

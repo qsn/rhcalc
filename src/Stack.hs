@@ -120,7 +120,7 @@ dumpstack base ys
   | len > 5   = '(' : show (len - 4) ++ " more on the stack)\n" ++ dump 4 ys
   | otherwise = dump 5 ys
   where len = length ys
-        dump n ys = foldr ($) "" . reverse $ zipWith (\n y -> shows n . (':':) . (' ':) . showsSymbol y . ('\n':)) [1..n] ys
+        dump n xs = foldr ($) "" . reverse $ zipWith (\i x -> shows i . (':':) . (' ':) . showsSymbol x . ('\n':)) [1..n] xs
         showsSymbol s = case base of
           Base 10 -> shows s
           Base b  -> case s of

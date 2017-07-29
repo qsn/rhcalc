@@ -56,19 +56,19 @@ fct_clearall = modify $ \ctx -> ctx { ctxMemory = Map.empty }
 -- clear a variable binding with the name at the top of the stack
 fct_clear :: CoreFct
 fct_clear = do
-  name <- pop
-  ifString name $ \n -> let name = rmquotes n
-                        in modify $ modCtxMemory (Map.delete name)
+  nameSym <- pop
+  ifString nameSym $ \quoted -> let name = rmquotes quoted
+                                in modify $ modCtxMemory (Map.delete name)
 
 -- store a variable
 -- name (String) at the top of the stack ; contents (any type) as the next value
 fct_store :: CoreFct
 fct_store = do
-  name <- pop
+  nameSym <- pop
   value <- pop
-  ifString name $ \n -> do
-    let name = rmquotes n
-    v <- lift . findvar $ n
+  ifString nameSym $ \quoted -> do
+    let name = rmquotes quoted
+    v <- lift . findvar $ quoted
     if isJust v
       then modify $ modCtxMemory (Map.update (\_ -> Just value) name)
       else modify $ modCtxMemory (Map.insert name value)

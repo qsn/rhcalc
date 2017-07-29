@@ -176,7 +176,9 @@ unit_get unit = case Map.lookup unit units of
   Just u  -> Right (unit,u)
   Nothing -> Left $ OtherError $ "unit not found " ++ unit
 
+unit_scriptfrom :: (a, (b, c)) -> b
 unit_scriptfrom = fst.snd
+unit_scriptto   :: (a, (b, c)) -> c
 unit_scriptto   = snd.snd
 
 unit_convert :: Fct
@@ -221,9 +223,14 @@ eitherToStack (Left err) = [String $ show err]
 eitherToStack (Right ss) = ss
 
 -- lists
+op_sum :: [Symbol] -> Stack
 op_sum [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in eitherToStack $ runscript ps xs
+op_mean :: [Symbol] -> Stack
 op_mean [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in eitherToStack $ runscript (ps ++ show n ++ " /") xs
 
+op_concat, op_addhead, op_reverse, op_length :: Fct
+op_head, op_tail, op_last, op_init :: Fct
+op_drop, op_take, op_range :: Fct
 op_concat [List   b,List   a] = [List   $ a ++ b]
 op_concat [String b,String a] = [String $ a ++ b]
 op_addhead [List xs, x] = [List $ x : xs]
@@ -249,6 +256,7 @@ op_range [end,start] = case (start,end) of
   (  _  ,  _  ) -> [List $ map Real [(tonum start)..(tonum end)]]
 
 -- stack
+op_swap, op_del, op_dup, op_rep, op_get, op_clear, op_type :: Fct
 op_swap [a,b] = [b,a]
 op_del  [_]   = []
 op_dup  [a]   = [a,a]
@@ -266,6 +274,10 @@ op_type [a]   = case a of
 
 
 -- logic/boolean operators
+logic_and, logic_or, logic_xor :: Fct
+logic_not, logic_nor, logic_nand :: Fct
+logic_lshift, logic_rshift :: Fct
+logic_swap2, logic_swap4, logic_swap8 :: Fct
 logic_and [Bool a, Bool b] = [Bool $ a && b]
 logic_and [Int a,  Int b]  = [Int  $ a .&. b]
 logic_or  [Bool a, Bool b] = [Bool $ a || b]
@@ -286,6 +298,7 @@ logic_swap4 [Int a]
 logic_swap8 [Int a]
   | a >= 0 = [Int $ do_swap 8 a]
 
+do_swap :: Int -> Integer -> Integer
 do_swap bytes = foldl (.|.) 0 . zipWith (flip shiftLB) [0..] . as_bytes bytes
   where shiftLB x = shiftL x . (*8)
         shiftRB x = shiftR x . (*8)
@@ -293,6 +306,7 @@ do_swap bytes = foldl (.|.) 0 . zipWith (flip shiftLB) [0..] . as_bytes bytes
           where h i = (x `shiftRB` i) .&. 0xff
 
 -- comparison tests
+test_eq, test_ne, test_lt, test_gt, test_le, test_ge :: Ord a => [a] -> [Symbol]
 test_eq [b,a] = [Bool $ a == b]
 test_ne [b,a] = [Bool $ a /= b]
 test_lt [b,a] = [Bool $ a <  b]
@@ -318,6 +332,7 @@ mathfct f [a] = case a of
 
 operators :: Map.Map String Operator
 operators   = Map.fromList $ op_stack ++ op_math ++ op_fct ++ op_logic ++ op_test ++ op_list ++ cst {-++ op_abstract-} ++ op_unit
+cst, op_list, op_stack, op_math, op_fct, op_logic, op_test, op_unit :: [(String, Operator)]
 cst         = [("pi", (0,1,\_ -> [Real pi], "Pi constant"))]
 op_list     = [("++", (2,1,op_concat, "Concatenate two lists")),
                (":", (2,1,op_addhead, "Add an element at the head of a list")),

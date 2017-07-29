@@ -34,6 +34,7 @@ newtype Base = Base Int deriving (Eq)
 data Settings = Settings { setBase :: Base, setAngle :: AngleUnit }
 data Context = Context { ctxStack :: Stack, ctxMemory :: Memory, ctxSettings :: Settings }
 
+defaultSettings :: Settings
 defaultSettings = Settings { setBase = Base 10, setAngle = Rad }
 
 ctxBase :: Context -> Base

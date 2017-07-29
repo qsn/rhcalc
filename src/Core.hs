@@ -26,7 +26,8 @@ type CoreFct = ExceptT CalcError (State Context) ()
 contextFromStack :: Stack -> Context
 contextFromStack s = Context { ctxStack = s, ctxMemory = Map.empty, ctxSettings = defaultSettings }
 
-st_dft = contextFromStack [] :: Context
+st_dft :: Context
+st_dft = contextFromStack []
 
 --
 -- basic functions
@@ -132,9 +133,11 @@ run s = do
 -- if the Symbol is a String, run the action, using the contents of the string as argument
 -- otherwise, throw an error
 --ifString :: MonadError CalcError m => Symbol -> (String -> m a) -> m a
+ifString :: Monad m => Symbol -> (String -> ExceptT CalcError m a) -> ExceptT CalcError m a
 ifString (String s) action = action s
 ifString _ _ = throwE $ TypeMismatch "String"
 
+ifInt :: Monad m => Symbol -> (Integer -> ExceptT CalcError m a) -> ExceptT CalcError m a
 ifInt (Int i) action
   | i > 1 = action i
 ifInt _ _ = throwE $ TypeMismatch "need Int >= 1"

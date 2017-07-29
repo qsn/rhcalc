@@ -221,10 +221,6 @@ eitherToStack :: Either CalcError Stack -> Stack
 eitherToStack (Left err) = [String $ show err]
 eitherToStack (Right ss) = ss
 
--- strings
-op_upper [String a] = [String $ map toUpper a]
-op_lower [String a] = [String $ map toLower a]
-
 -- lists
 op_sum [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in eitherToStack $ runscript ps xs
 op_mean [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in eitherToStack $ runscript (ps ++ show n ++ " /") xs

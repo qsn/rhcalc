@@ -147,9 +147,6 @@ calc args ctx = case parse args of
 leftToMaybe :: Either a b -> Maybe a
 leftToMaybe = either Just (const Nothing)
 
-eval :: ExceptT CalcError (State Context) a -> Context -> (Either CalcError a, Context)
-eval f s = runState (runExceptT f) s
-
 -- removes first and final quote, if present
 rmquotes :: String -> String
 rmquotes [] = []

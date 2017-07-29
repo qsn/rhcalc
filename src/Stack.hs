@@ -127,9 +127,6 @@ dumpstack base ys
             Int i -> (if i < 0 then ('-':) else id) . showIntAtBase (fromIntegral b) intToDigit (abs i)
             _     -> shows s
 
-peek :: Stack -> String
-peek ys = show $ head ys
-
 tonum :: Symbol -> Double
 tonum (Int n)      = fromIntegral n
 tonum (Frac (n,d)) = (fromIntegral n)/(fromIntegral d)

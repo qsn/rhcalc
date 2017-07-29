@@ -132,6 +132,7 @@ tonum (Frac (n,d)) = (fromIntegral n)/(fromIntegral d)
 tonum (Real x)     = x
 tonum (Bool True)  = 1
 tonum (Bool False) = 0
+tonum _ = error "Can't convert this to a number"
 
 
 -- push a Symbol to the stack

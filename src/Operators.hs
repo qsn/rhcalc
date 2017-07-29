@@ -4,17 +4,14 @@ module Operators
   )
   where
 
-import Control.Applicative
 import Control.Monad.State
-import Control.Monad.Trans.Except
 import Data.Bits
 import Data.Char
 import Data.List
-import Data.Maybe
 import qualified Data.Map as Map
 
 import Stack (Symbol(Int, Frac, Real, Bool, Variable, String, List), Stack, Context(..), modCtxStack, CalcError(OtherError), tonum)
-import {-# SOURCE #-} Core  (calc, st_dft, contextFromStack, CoreFct)
+import {-# SOURCE #-} Core  (calc, contextFromStack, CoreFct)
 
 type HelpString = String
 type Fct    = [Symbol] -> [Symbol]

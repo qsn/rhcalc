@@ -11,7 +11,6 @@ import Text.ParserCombinators.Parsec hiding (parse)
 import qualified Text.ParserCombinators.Parsec as Parsec
 
 import Data.Functor ((<$>))
-import Data.Maybe (isJust)
 import Control.Monad (when)
 import Numeric (readHex, readOct, readDec)
 

@@ -8,7 +8,6 @@ module Core
   )
   where
 
-import Control.Applicative
 import Control.Monad.State
 import Control.Monad.Trans.Except
 import qualified Data.Map as Map

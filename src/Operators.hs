@@ -31,8 +31,8 @@ type Operator = (Int, Int, Fct, HelpString)
 run :: Operator -> Stack -> Stack
 run (argc,_,f,_) ys
   | length argv == n = f argv ++ zs
-  where (n,ys') = case argc of 
-          -1 -> (round.tonum $ head ys, tail ys) 
+  where (n,ys') = case argc of
+          -1 -> (round.tonum $ head ys, tail ys)
           -2 -> (length ys, ys)
           _ -> (argc, ys)
         (argv,zs) = splitAt n ys'

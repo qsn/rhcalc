@@ -138,13 +138,13 @@ op_rnd [List xs]    = [List $ map (\x -> head $ op_rnd [x]) xs]
 
 op_floor :: Fct
 op_floor [Int n] = [Int n]
-op_floor [Frac (n,d)] = [Int $ floor $ (fromIntegral n)/(fromIntegral d)]
+op_floor [Frac (n,d)] = [Int $ floor $ (intToDouble n)/(intToDouble d)]
 op_floor [Real x] = [Int $ floor x]
 op_floor [List xs]    = [List $ map (\x -> head $ op_floor [x]) xs]
 
 op_ceil :: Fct
 op_ceil [Int n] = [Int n]
-op_ceil [Frac (n,d)] = [Int $ ceiling $ (fromIntegral n)/(fromIntegral d)]
+op_ceil [Frac (n,d)] = [Int $ ceiling $ (intToDouble n)/(intToDouble d)]
 op_ceil [Real x] = [Int $ ceiling x]
 op_ceil [List xs]    = [List $ map (\x -> head $ op_ceil [x]) xs]
 
@@ -154,6 +154,8 @@ op_abs [Frac (n,d)] = [Frac (abs n,d)]
 op_abs [Real x] = [Real $ abs x]
 op_abs [List xs]    = [List $ map (\x -> head $ op_abs [x]) xs]
 
+intToDouble :: Integer -> Double
+intToDouble = fromIntegral
 
 -- units/dimensions
 data Dimension = Mass | Length | Time | Temperature | Volume | Pressure | Speed | Force deriving (Show,Eq) -- | Intensity | LightIntensity | ...

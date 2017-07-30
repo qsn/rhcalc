@@ -12,7 +12,7 @@ import qualified Text.ParserCombinators.Parsec as Parsec (parse)
 
 import Data.Functor ((<$>))
 import Control.Monad (when)
-import Numeric (readHex, readOct, readDec)
+import Numeric (readHex, readOct, readDec, readInt)
 
 parse :: [Char] -> Either CalcError [Symbol]
 parse input = case Parsec.parse rpnInput "(RPN input)" input of
@@ -100,7 +100,8 @@ decInt   :: GenParser Char st [(Integer,String)]
 hexInt = string "0x" >> intBase hexDigit readHex "hexadecimal number"
 octalInt = char '0' >> intBase octDigit readOct "octal number"
 binInt = string "0b" >> intBase (oneOf "01") readBin "binary number"
-  where readBin = (:[]) . (,"") . foldl (\n c -> n * 2 + if c == '0' then 0 else 1) 0
+  where readBin :: Num a => ReadS a
+        readBin = readInt 2 (`elem` "01") (\c -> if c == '0' then 0 else 1)
 decInt = intBase digit readDec "number"
 
 quotedString :: GenParser Char st String

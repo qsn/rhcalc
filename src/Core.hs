@@ -77,8 +77,7 @@ fct_store = do
 fct_showvars :: CoreFct
 fct_showvars = do
   ctx <- get
-  push $ showvars (ctxMemory ctx)
-  where showvars = String . show . Map.toList
+  push $ String (showCtxMemory ctx)
 
 fct_base :: CoreFct
 fct_base = do
@@ -88,8 +87,7 @@ fct_base = do
 fct_showsettings :: CoreFct
 fct_showsettings = do
   ctx <- get
-  push $ showsettings (ctxSettings ctx)
-  where showsettings = String . show
+  push $ String (showCtxSettings ctx)
 
 -- run the script (String) at the top of the stack
 fct_run :: CoreFct

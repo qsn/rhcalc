@@ -14,6 +14,8 @@ module Stack
   , setCtxBase
   , modCtxStack
   , modCtxMemory
+  , showCtxMemory
+  , showCtxSettings
   )
   where
 
@@ -49,6 +51,12 @@ modCtxStack f ctx = ctx { ctxStack = f (ctxStack ctx) }
 
 modCtxMemory :: (Memory -> Memory) -> Context -> Context
 modCtxMemory f ctx = ctx { ctxMemory = f (ctxMemory ctx) }
+
+showCtxSettings :: Context -> String
+showCtxSettings = show . ctxSettings
+
+showCtxMemory :: Context -> String
+showCtxMemory = show . Map.toList . ctxMemory
 
 data CalcError = ParseError String
                | ParsecError (PE.ParseError)

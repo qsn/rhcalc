@@ -14,24 +14,19 @@ import Core  (calc, st_dft)
 prompt = "% "
 errorPrefix = "  > "
 
-do_calc_main :: Context -> IO ()
-do_calc_main ctx = do
+-- interactive mode, console, main loop
+-- C-d and "exit" quit
+calc_main :: (Context,Context) -> Maybe CalcError -> IO ()
+calc_main (safeCtx, ctx) err = do
+  newSafeCtx <- X.catch (try ctx) (handler safeCtx)
+  printError err
   maybeLine <- readline prompt
   case maybeLine >>= exit of
     Nothing     -> return ()
     Just args   -> do
       addHistory args
-      let (err, ctx') = calc args ctx
-      calc_main (ctx, ctx') err
-  where exit s = if s == "exit" then Nothing else Just s
-
--- interactive mode, console, main loop
--- C-d and "exit" quit
-calc_main :: (Context,Context) -> Maybe CalcError -> IO ()
-calc_main (safeCtx, ctx) err = do
-  newctx <- X.catch (try ctx) (handler safeCtx)
-  printError err
-  do_calc_main newctx
+      let (err, newCtx) = calc args newSafeCtx
+      calc_main (newSafeCtx, newCtx) err
   where try ctx = do
           putStr $ dumpcontext ctx
           return ctx
@@ -44,6 +39,7 @@ calc_main (safeCtx, ctx) err = do
           case (fromException e) :: Maybe PatternMatchFail of
            Just x -> putStrLn "  > operation not supported"
            nothing -> return ()
+        exit s = if s == "exit" then Nothing else Just s
 
 -- display an error in console interactive mode
 printError :: Maybe CalcError -> IO ()

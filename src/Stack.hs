@@ -54,6 +54,7 @@ data CalcError = ParseError String
                | ParsecError (PE.ParseError)
                | TypeMismatch String
                | EmptyStack
+               | OperationNotSupported
                | OtherError String
                deriving (Show)
 

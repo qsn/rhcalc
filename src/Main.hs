@@ -8,7 +8,7 @@ import Data.Maybe (isJust,fromJust)
 import Control.Monad (when)
 import Control.Exception as X
 
-import Stack (dumpcontext, CalcError, Context(..), ctxBase)
+import Stack (dumpcontext, CalcError(..), Context(..), ctxBase)
 import Core  (calc, st_dft)
 
 prompt = "% "
@@ -32,13 +32,12 @@ calc_main (safeCtx, ctx) err = do
           return ctx
         handler ctx e = do
           putStr $ dumpcontext ctx
-          printErr e
+          printException e
           return ctx
-        printErr :: SomeException -> IO ()
-        printErr e =  do
-          case (fromException e) :: Maybe PatternMatchFail of
-           Just x -> putStrLn "  > operation not supported"
-           nothing -> return ()
+        printException :: SomeException -> IO ()
+        printException e = printError
+          $ OperationNotSupported
+          <$ ((fromException e) :: Maybe PatternMatchFail)
         exit s = if s == "exit" then Nothing else Just s
 
 -- display an error in console interactive mode

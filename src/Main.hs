@@ -17,12 +17,12 @@ errorPrefix = "  > "
 do_calc_main :: Context -> IO ()
 do_calc_main ctx = do
   maybeLine <- readline prompt
-  ((err, ctx'), c) <- case maybeLine >>= exit of
-    Nothing     -> return ((Nothing, ctx), False)
+  case maybeLine >>= exit of
+    Nothing     -> return ()
     Just args   -> do
       addHistory args
-      return (calc args ctx, True)
-  if c then calc_main (ctx, ctx') err else return ()
+      let (err, ctx') = calc args ctx
+      calc_main (ctx, ctx') err
   where exit s = if s == "exit" then Nothing else Just s
 
 -- interactive mode, console, main loop

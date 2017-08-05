@@ -8,7 +8,7 @@ import Data.Maybe (isJust,fromJust)
 import Control.Monad (when)
 import Control.Exception as X
 
-import Stack (dumpstack, CalcError, Context(..), ctxBase)
+import Stack (dumpcontext, CalcError, Context(..), ctxBase)
 import Core  (calc, st_dft)
 
 prompt = "% "
@@ -29,8 +29,8 @@ do_calc_main ctx = do
 -- C-d and "exit" quit
 calc_main :: (Context,Context) -> Maybe CalcError -> IO ()
 calc_main (safeCtx, ctx) err = do
-  let s = dumpstack (ctxBase ctx) (ctxStack ctx)
-  let s' = dumpstack (ctxBase safeCtx) (ctxStack safeCtx)
+  let s = dumpcontext ctx
+  let s' = dumpcontext safeCtx
   newctx <- X.catch (success s ctx) (handler s' safeCtx)
   printError err
   do_calc_main newctx
@@ -58,7 +58,7 @@ printResult (Just err, _) = do
   putStrLn $ show err
   exitFailure
 printResult (Nothing, ctx) = do
-  putStr $ dumpstack (ctxBase ctx) (ctxStack ctx)
+  putStr $ dumpcontext ctx
   exitSuccess
 
 -- standard mode: console, interactive

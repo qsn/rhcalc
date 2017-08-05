@@ -8,7 +8,7 @@ module Stack
   , pop
   , push
   , tonum
-  , dumpstack
+  , dumpcontext
   , defaultSettings
   , ctxBase
   , setCtxBase
@@ -110,6 +110,9 @@ instance Show Symbol where
   show (String s)   = s
   show (Variable s) = s
   show (List xs)    = show xs
+
+dumpcontext :: Context -> String
+dumpcontext ctx = dumpstack (ctxBase ctx) (ctxStack ctx)
 
 dumpstack :: Base -> Stack -> String
 dumpstack base ys

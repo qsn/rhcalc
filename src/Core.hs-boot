@@ -7,5 +7,5 @@ import Stack
 
 contextFromStack :: Stack -> Context
 st_dft :: Context
-calc :: String -> Context -> (Either CalcError (), Context)
+calc :: String -> Context -> (Maybe CalcError, Context)
 type CoreFct = ExceptT CalcError (State Context) ()

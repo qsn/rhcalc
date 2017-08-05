@@ -17,11 +17,11 @@ errorPrefix = "  > "
 do_calc_main :: Context -> IO ()
 do_calc_main ctx = do
   maybeLine <- readline prompt
-  ((ctx', err), c) <- case maybeLine >>= exit of
-    Nothing     -> return ((ctx, Nothing), False)
+  ((err, ctx'), c) <- case maybeLine >>= exit of
+    Nothing     -> return ((Nothing, ctx), False)
     Just args   -> do
       addHistory args
-      return (unwrapError $ calc args ctx, True)
+      return (calc args ctx, True)
   if c then calc_main (ctx, ctx') err else return ()
   where exit s = if s == "exit" then Nothing else Just s
 
@@ -45,23 +45,19 @@ calc_main (safeCtx, ctx) err = do
         printErr :: SomeException -> IO ()
         printErr e =  do
           case (fromException e) :: Maybe PatternMatchFail of
-           Just x -> putStrLn "operation not supported"
+           Just x -> putStrLn "  > operation not supported"
            nothing -> return ()
-
-unwrapError :: (Either CalcError a, Context) -> (Context, Maybe CalcError)
-unwrapError (Left e,  ctx_error)  = (ctx_error, Just e)
-unwrapError (Right _, ctx_success)= (ctx_success, Nothing)
 
 -- display an error in console interactive mode
 printError :: Maybe CalcError -> IO ()
 printError err = when (isJust err) . putStrLn $ errorPrefix ++ show (fromJust err)
 
 -- script/single input mode, evaluate one expression and exit
-printResult :: (Either CalcError a, Context) -> IO a
-printResult (Left err, _) = do
+printResult :: (Maybe CalcError, Context) -> IO a
+printResult (Just err, _) = do
   putStrLn $ show err
   exitFailure
-printResult (Right _, ctx) = do
+printResult (Nothing, ctx) = do
   putStr $ dumpstack (ctxBase ctx) (ctxStack ctx)
   exitSuccess
 

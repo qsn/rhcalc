@@ -29,19 +29,16 @@ do_calc_main ctx = do
 -- C-d and "exit" quit
 calc_main :: (Context,Context) -> Maybe CalcError -> IO ()
 calc_main (safeCtx, ctx) err = do
-  let s = dumpcontext ctx
-  let s' = dumpcontext safeCtx
-  newctx <- X.catch (success s ctx) (handler s' safeCtx)
+  newctx <- X.catch (try ctx) (handler safeCtx)
   printError err
   do_calc_main newctx
-  where success :: String -> a -> IO a
-        success s res = do
-          putStr s
-          return res
-        handler s ret e = do
-          putStr s
+  where try ctx = do
+          putStr $ dumpcontext ctx
+          return ctx
+        handler ctx e = do
+          putStr $ dumpcontext ctx
           printErr e
-          return ret
+          return ctx
         printErr :: SomeException -> IO ()
         printErr e =  do
           case (fromException e) :: Maybe PatternMatchFail of

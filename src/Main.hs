@@ -67,13 +67,16 @@ printResult (Nothing, ctx) = do
 --   -e evaluate the string passed and exit
 main :: IO ()
 main = do
+  input <- getInput
+  case input of
+    Nothing -> calc_main (st_dft,st_dft) Nothing
+    Just expr -> printResult $ calc expr st_dft
+
+getInput :: IO (Maybe String)
+getInput = do
   args <- getArgs
   if "-" `elem` args
-  then do
-    expr <- getContents
-    printResult $ calc expr st_dft
-  else if length args > 1 && (args !! 0) == "-e"
-       then do
-         let expr = args !! 1
-         printResult $ calc expr st_dft
-       else calc_main (st_dft,st_dft) Nothing
+    then fmap Just getContents
+    else if length args > 1 && (args !! 0) == "-e"
+         then return $ Just (args !! 1)
+         else return Nothing

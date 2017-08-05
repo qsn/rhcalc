@@ -3,12 +3,9 @@
 import System.Exit
 import System.Environment (getArgs)
 import System.Console.Readline
-import qualified Data.Map as Map
-import Data.Maybe (isJust,fromJust)
-import Control.Monad (when)
-import Control.Exception as X
+import qualified Control.Exception as X
 
-import Stack (dumpcontext, CalcError(..), Context(..), ctxBase)
+import Stack (dumpcontext, CalcError(OperationNotSupported), Context)
 import Core  (calc, st_dft)
 
 prompt = "% "
@@ -33,7 +30,7 @@ calc_main (safeCtx, ctx) err = do
           putStr $ dumpcontext ctx
           return ctx
         exit s = if s == "exit" then Nothing else Just s
-        isPatternMatchFail (PatternMatchFail _) = Just OperationNotSupported
+        isPatternMatchFail (X.PatternMatchFail _) = Just OperationNotSupported
 
 -- display an error in console interactive mode
 printError err = putStrLn $ errorPrefix ++ show err

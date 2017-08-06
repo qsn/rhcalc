@@ -8,14 +8,15 @@ module Core
   )
   where
 
-import Control.Applicative
-import Control.Monad.State
-import Control.Monad.Trans.Except
+import Data.Foldable (msum)
+import Control.Monad (liftM)
+import Control.Monad.Trans (lift)
+import Control.Monad.State (State, runState, get, modify)
+import Control.Monad.Trans.Except (ExceptT, throwE, runExceptT)
 import qualified Data.Map as Map
-import Data.Maybe
+import Data.Maybe (isJust, fromJust)
 
---import {-# SOURCE #-} Operators
-import Operators
+import Operators (findoperator)
 import Stack
 import Parser (parse)
 
@@ -25,7 +26,8 @@ type CoreFct = ExceptT CalcError (State Context) ()
 contextFromStack :: Stack -> Context
 contextFromStack s = Context { ctxStack = s, ctxMemory = Map.empty, ctxSettings = defaultSettings }
 
-st_dft = contextFromStack [] :: Context
+st_dft :: Context
+st_dft = contextFromStack []
 
 --
 -- basic functions
@@ -54,19 +56,19 @@ fct_clearall = modify $ \ctx -> ctx { ctxMemory = Map.empty }
 -- clear a variable binding with the name at the top of the stack
 fct_clear :: CoreFct
 fct_clear = do
-  name <- pop
-  ifString name $ \n -> let name = rmquotes n
-                        in modify $ modCtxMemory (Map.delete name)
+  nameSym <- pop
+  ifString nameSym $ \quoted -> let name = rmquotes quoted
+                                in modify $ modCtxMemory (Map.delete name)
 
 -- store a variable
 -- name (String) at the top of the stack ; contents (any type) as the next value
 fct_store :: CoreFct
 fct_store = do
-  name <- pop
+  nameSym <- pop
   value <- pop
-  ifString name $ \n -> do
-    let name = rmquotes n
-    v <- lift . findvar $ n
+  ifString nameSym $ \quoted -> do
+    let name = rmquotes quoted
+    v <- lift . findvar $ quoted
     if isJust v
       then modify $ modCtxMemory (Map.update (\_ -> Just value) name)
       else modify $ modCtxMemory (Map.insert name value)
@@ -75,8 +77,7 @@ fct_store = do
 fct_showvars :: CoreFct
 fct_showvars = do
   ctx <- get
-  push $ showvars (ctxMemory ctx)
-  where showvars = String . show . Map.toList
+  push $ String (showCtxMemory ctx)
 
 fct_base :: CoreFct
 fct_base = do
@@ -86,8 +87,7 @@ fct_base = do
 fct_showsettings :: CoreFct
 fct_showsettings = do
   ctx <- get
-  push $ showsettings (ctxSettings ctx)
-  where showsettings = String . show
+  push $ String (showCtxSettings ctx)
 
 -- run the script (String) at the top of the stack
 fct_run :: CoreFct
@@ -131,9 +131,11 @@ run s = do
 -- if the Symbol is a String, run the action, using the contents of the string as argument
 -- otherwise, throw an error
 --ifString :: MonadError CalcError m => Symbol -> (String -> m a) -> m a
+ifString :: Monad m => Symbol -> (String -> ExceptT CalcError m a) -> ExceptT CalcError m a
 ifString (String s) action = action s
 ifString _ _ = throwE $ TypeMismatch "String"
 
+ifInt :: Monad m => Symbol -> (Integer -> ExceptT CalcError m a) -> ExceptT CalcError m a
 ifInt (Int i) action
   | i > 1 = action i
 ifInt _ _ = throwE $ TypeMismatch "need Int >= 1"
@@ -147,9 +149,6 @@ calc args ctx = case parse args of
 
 leftToMaybe :: Either a b -> Maybe a
 leftToMaybe = either Just (const Nothing)
-
-eval :: ExceptT CalcError (State Context) a -> Context -> (Either CalcError a, Context)
-eval f s = runState (runExceptT f) s
 
 -- removes first and final quote, if present
 rmquotes :: String -> String

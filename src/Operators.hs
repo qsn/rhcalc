@@ -4,17 +4,13 @@ module Operators
   )
   where
 
-import Control.Applicative
-import Control.Monad.State
-import Control.Monad.Trans.Except
-import Data.Bits
-import Data.Char
-import Data.List
-import Data.Maybe
+import Control.Monad.State (modify)
+import Data.Bits ((.&.), (.|.), xor, shiftL, shiftR)
+import Data.List (genericLength)
 import qualified Data.Map as Map
 
-import Stack (Symbol(Int, Frac, Real, Bool, Variable, String, List), Stack, Context(..), modCtxStack, CalcError(OtherError), tonum)
-import {-# SOURCE #-} Core  (calc, st_dft, contextFromStack, CoreFct)
+import Stack (Symbol(Int, Frac, Real, Bool, Variable, String, List), Stack, ctxStack, modCtxStack, CalcError(OtherError), tonum)
+import {-# SOURCE #-} Core  (calc, contextFromStack, CoreFct)
 
 type HelpString = String
 type Fct    = [Symbol] -> [Symbol]
@@ -33,10 +29,10 @@ Stack operator
 type Operator = (Int, Int, Fct, HelpString)
 
 run :: Operator -> Stack -> Stack
-run (argc,rc,f,_) ys
+run (argc,_,f,_) ys
   | length argv == n = f argv ++ zs
-  where (n,ys') = case argc of 
-          -1 -> (round.tonum $ head ys, tail ys) 
+  where (n,ys') = case argc of
+          -1 -> (round.tonum $ head ys, tail ys)
           -2 -> (length ys, ys)
           _ -> (argc, ys)
         (argv,zs) = splitAt n ys'
@@ -142,13 +138,13 @@ op_rnd [List xs]    = [List $ map (\x -> head $ op_rnd [x]) xs]
 
 op_floor :: Fct
 op_floor [Int n] = [Int n]
-op_floor [Frac (n,d)] = [Int $ floor $ (fromIntegral n)/(fromIntegral d)]
+op_floor [Frac (n,d)] = [Int $ floor $ (intToDouble n)/(intToDouble d)]
 op_floor [Real x] = [Int $ floor x]
 op_floor [List xs]    = [List $ map (\x -> head $ op_floor [x]) xs]
 
 op_ceil :: Fct
 op_ceil [Int n] = [Int n]
-op_ceil [Frac (n,d)] = [Int $ ceiling $ (fromIntegral n)/(fromIntegral d)]
+op_ceil [Frac (n,d)] = [Int $ ceiling $ (intToDouble n)/(intToDouble d)]
 op_ceil [Real x] = [Int $ ceiling x]
 op_ceil [List xs]    = [List $ map (\x -> head $ op_ceil [x]) xs]
 
@@ -158,6 +154,8 @@ op_abs [Frac (n,d)] = [Frac (abs n,d)]
 op_abs [Real x] = [Real $ abs x]
 op_abs [List xs]    = [List $ map (\x -> head $ op_abs [x]) xs]
 
+intToDouble :: Integer -> Double
+intToDouble = fromIntegral
 
 -- units/dimensions
 data Dimension = Mass | Length | Time | Temperature | Volume | Pressure | Speed | Force deriving (Show,Eq) -- | Intensity | LightIntensity | ...
@@ -180,23 +178,25 @@ unit_get unit = case Map.lookup unit units of
   Just u  -> Right (unit,u)
   Nothing -> Left $ OtherError $ "unit not found " ++ unit
 
+unit_scriptfrom :: (a, (b, c)) -> b
 unit_scriptfrom = fst.snd
+unit_scriptto   :: (a, (b, c)) -> c
 unit_scriptto   = snd.snd
 
 unit_convert :: Fct
 unit_convert [String to, String from, value] = case dims of
   Left err -> [String $ show err]
-  Right _  -> eitherToStack $ units >>= convert
+  Right _  -> eitherToStack $ unitPair >>= convert
   where unit_from :: Either CalcError (String, Unit)
         unit_from = unit_get from
         unit_to   :: Either CalcError (String, Unit)
         unit_to   = unit_get to
         dims :: Either CalcError (Unit, Unit)
-        dims = units >>= check_dims
+        dims = unitPair >>= check_dims
         check_dims :: ((String,Unit),(String,Unit)) -> Either CalcError (Unit,Unit)
         check_dims (a,b) = check_dimensions a b
-        units :: Either CalcError ((String,Unit),(String,Unit))
-        units = do
+        unitPair :: Either CalcError ((String,Unit),(String,Unit))
+        unitPair = do
           uf <- unit_from
           ut <- unit_to
           return (uf,ut)
@@ -224,14 +224,15 @@ eitherToStack :: Either CalcError Stack -> Stack
 eitherToStack (Left err) = [String $ show err]
 eitherToStack (Right ss) = ss
 
--- strings
-op_upper [String a] = [String $ map toUpper a]
-op_lower [String a] = [String $ map toLower a]
-
 -- lists
+op_sum :: [Symbol] -> Stack
 op_sum [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in eitherToStack $ runscript ps xs
+op_mean :: [Symbol] -> Stack
 op_mean [List xs] = let (n,ps) = (length xs,concat $ replicate (n-1) "+ ") in eitherToStack $ runscript (ps ++ show n ++ " /") xs
 
+op_concat, op_addhead, op_reverse, op_length :: Fct
+op_head, op_tail, op_last, op_init :: Fct
+op_drop, op_take, op_range :: Fct
 op_concat [List   b,List   a] = [List   $ a ++ b]
 op_concat [String b,String a] = [String $ a ++ b]
 op_addhead [List xs, x] = [List $ x : xs]
@@ -257,8 +258,9 @@ op_range [end,start] = case (start,end) of
   (  _  ,  _  ) -> [List $ map Real [(tonum start)..(tonum end)]]
 
 -- stack
+op_swap, op_del, op_dup, op_rep, op_get, op_clear, op_type :: Fct
 op_swap [a,b] = [b,a]
-op_del  [a]   = []
+op_del  [_]   = []
 op_dup  [a]   = [a,a]
 op_rep  [Int n,a]  = replicate (fromIntegral n) a
 op_get  xs    = last xs : init xs
@@ -274,6 +276,10 @@ op_type [a]   = case a of
 
 
 -- logic/boolean operators
+logic_and, logic_or, logic_xor :: Fct
+logic_not, logic_nor, logic_nand :: Fct
+logic_lshift, logic_rshift :: Fct
+logic_swap2, logic_swap4, logic_swap8 :: Fct
 logic_and [Bool a, Bool b] = [Bool $ a && b]
 logic_and [Int a,  Int b]  = [Int  $ a .&. b]
 logic_or  [Bool a, Bool b] = [Bool $ a || b]
@@ -294,6 +300,7 @@ logic_swap4 [Int a]
 logic_swap8 [Int a]
   | a >= 0 = [Int $ do_swap 8 a]
 
+do_swap :: Int -> Integer -> Integer
 do_swap bytes = foldl (.|.) 0 . zipWith (flip shiftLB) [0..] . as_bytes bytes
   where shiftLB x = shiftL x . (*8)
         shiftRB x = shiftR x . (*8)
@@ -301,6 +308,7 @@ do_swap bytes = foldl (.|.) 0 . zipWith (flip shiftLB) [0..] . as_bytes bytes
           where h i = (x `shiftRB` i) .&. 0xff
 
 -- comparison tests
+test_eq, test_ne, test_lt, test_gt, test_le, test_ge :: Ord a => [a] -> [Symbol]
 test_eq [b,a] = [Bool $ a == b]
 test_ne [b,a] = [Bool $ a /= b]
 test_lt [b,a] = [Bool $ a <  b]
@@ -309,23 +317,15 @@ test_le [b,a] = [Bool $ a <= b]
 test_ge [b,a] = [Bool $ a >= b]
 
 -- math functions
-data MathFct = Cos | Sin | Tan | Exp | Log | Sqrt deriving (Show,Read)
-
-mathfct :: MathFct -> [Symbol] -> [Symbol]
+mathfct :: (Double -> Double) -> [Symbol] -> [Symbol]
 mathfct f [a] = case a of
-  Int n      -> [Real (f' $ fromIntegral n)]
-  Frac (n,d) -> [Real (f' $ (fromIntegral n)/(fromIntegral d))]
-  Real x     -> [Real (f' $ x)]
-  where f' = case f of
-          Cos  -> cos
-          Sin  -> sin
-          Tan  -> tan
-          Exp  -> exp
-          Log  -> log
-          Sqrt -> sqrt
+  Int n      -> [Real (f $ fromIntegral n)]
+  Frac (n,d) -> [Real (f $ (fromIntegral n)/(fromIntegral d))]
+  Real x     -> [Real (f $ x)]
 
 operators :: Map.Map String Operator
 operators   = Map.fromList $ op_stack ++ op_math ++ op_fct ++ op_logic ++ op_test ++ op_list ++ cst {-++ op_abstract-} ++ op_unit
+cst, op_list, op_stack, op_math, op_fct, op_logic, op_test, op_unit :: [(String, Operator)]
 cst         = [("pi", (0,1,\_ -> [Real pi], "Pi constant"))]
 op_list     = [("++", (2,1,op_concat, "Concatenate two lists")),
                (":", (2,1,op_addhead, "Add an element at the head of a list")),
@@ -360,12 +360,12 @@ op_math     = [("n", (1,1,op_neg, "Changes the sign of the first stack element")
                ("floor", (1,1,op_floor, "Rounds a numerical value to the integer immediately smaller")),
                ("ceil", (1,1,op_ceil, "Rounds a numerical value to the integer immediately larger")),
                ("abs", (1,1,op_abs, "Absolute value"))]
-op_fct      = [("cos", (1,1,mathfct Cos, "Cosine, parameter in radians")),
-               ("sin", (1,1,mathfct Sin, "Sine, parameter in radians")),
-               ("tan", (1,1,mathfct Tan, "Tangent, parameter in radians")),
-               ("exp", (1,1,mathfct Exp, "Exponential")),
-               ("log", (1,1,mathfct Log, "Logarithm (base e))")),
-               ("sqrt", (1,1,mathfct Sqrt, "Square root"))]
+op_fct      = [("cos", (1,1,mathfct cos, "Cosine, parameter in radians")),
+               ("sin", (1,1,mathfct sin, "Sine, parameter in radians")),
+               ("tan", (1,1,mathfct tan, "Tangent, parameter in radians")),
+               ("exp", (1,1,mathfct exp, "Exponential")),
+               ("log", (1,1,mathfct log, "Logarithm (base e))")),
+               ("sqrt", (1,1,mathfct sqrt, "Square root"))]
 op_logic    = [("and", (2,1,logic_and, "Logical AND")),
                ("or", (2,1,logic_or, "Logical OR")),
                ("xor", (2,1,logic_xor, "Logical XOR")),

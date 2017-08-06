@@ -1,24 +1,25 @@
 --module RHCalc where
 
-import System.Exit
+import System.Exit (exitFailure, exitSuccess)
 import System.Environment (getArgs)
-import System.Console.Readline
+import System.Console.Readline (addHistory, readline)
 import qualified Control.Exception as X
 
 import Stack (dumpcontext, CalcError(OperationNotSupported), Context)
 import Core  (calc, st_dft)
 
+prompt, errorPrefix :: String
 prompt = "% "
 errorPrefix = "  > "
 
 -- interactive mode, console, main loop
 -- C-d and "exit" quit
 calc_main :: (Context,Context) -> Maybe CalcError -> IO ()
-calc_main (safeCtx, ctx) err = do
-  res <- X.tryJust isPatternMatchFail (try ctx)
+calc_main (safeCtx, tryCtx) merr = do
+  res <- X.tryJust isPatternMatchFail (try tryCtx)
   newSafeCtx <- case res of
     Left err -> printError err >> return safeCtx
-    Right ctx -> printError' err >> return ctx
+    Right newCtx -> printError' merr >> return newCtx
   maybeLine <- readline prompt
   case maybeLine >>= exit of
     Nothing     -> return ()
@@ -33,7 +34,9 @@ calc_main (safeCtx, ctx) err = do
         isPatternMatchFail (X.PatternMatchFail _) = Just OperationNotSupported
 
 -- display an error in console interactive mode
+printError :: CalcError -> IO ()
 printError err = putStrLn $ errorPrefix ++ show err
+printError' :: Maybe CalcError -> IO ()
 printError' = sequence_ . fmap printError
 
 -- script/single input mode, evaluate one expression and exit

@@ -14,17 +14,18 @@ module Stack
   , setCtxBase
   , modCtxStack
   , modCtxMemory
+  , showCtxMemory
+  , showCtxSettings
   )
   where
 
-import Control.Monad.Trans.Except
-import Control.Monad.State
+import Control.Monad.Trans.Except (ExceptT, throwE)
+import Control.Monad.State (State, modify, get, put)
 import qualified Data.Map as Map
 
 import Text.ParserCombinators.Parsec.Error as PE (ParseError)
 
-import Data.Char
-import Data.List
+import Data.Char (intToDigit)
 import Numeric (showIntAtBase)
 
 data Symbol = Int Integer | Frac (Integer,Integer) | Real Double | Bool Bool | Variable String | String String | List [Symbol]
@@ -35,6 +36,7 @@ newtype Base = Base Int deriving (Eq)
 data Settings = Settings { setBase :: Base, setAngle :: AngleUnit }
 data Context = Context { ctxStack :: Stack, ctxMemory :: Memory, ctxSettings :: Settings }
 
+defaultSettings :: Settings
 defaultSettings = Settings { setBase = Base 10, setAngle = Rad }
 
 ctxBase :: Context -> Base
@@ -49,6 +51,12 @@ modCtxStack f ctx = ctx { ctxStack = f (ctxStack ctx) }
 
 modCtxMemory :: (Memory -> Memory) -> Context -> Context
 modCtxMemory f ctx = ctx { ctxMemory = f (ctxMemory ctx) }
+
+showCtxSettings :: Context -> String
+showCtxSettings = show . ctxSettings
+
+showCtxMemory :: Context -> String
+showCtxMemory = show . Map.toList . ctxMemory
 
 data CalcError = ParseError String
                | ParsecError (PE.ParseError)
@@ -94,10 +102,10 @@ instance Ord Symbol where
   compare (Frac (n,d)) (Int n')  = compare (Frac (n,d)) (Frac (n',1))
   compare (Frac (n,d)) (Frac (n',d')) = compare (n*d') (n'*d)
   compare (String s) (String s') = compare s s'
-  compare (String s) _ = undefined
-  compare _ (String s) = undefined
-  compare (Variable c) _ = undefined
-  compare _ (Variable c) = undefined
+  compare (String _) _ = undefined
+  compare _ (String _) = undefined
+  compare (Variable _) _ = undefined
+  compare _ (Variable _) = undefined
   compare (List xs) (List ys) = compare xs ys
   compare (List _)   _        = undefined
   compare   _  (List _)       = undefined
@@ -120,15 +128,12 @@ dumpstack base ys
   | len > 5   = '(' : show (len - 4) ++ " more on the stack)\n" ++ dump 4 ys
   | otherwise = dump 5 ys
   where len = length ys
-        dump n ys = foldr ($) "" . reverse $ zipWith (\n y -> shows n . (':':) . (' ':) . showsSymbol y . ('\n':)) [1..n] ys
+        dump n xs = foldr ($) "" . reverse $ zipWith (\i x -> shows i . (':':) . (' ':) . showsSymbol x . ('\n':)) [1..n] xs
         showsSymbol s = case base of
           Base 10 -> shows s
           Base b  -> case s of
             Int i -> (if i < 0 then ('-':) else id) . showIntAtBase (fromIntegral b) intToDigit (abs i)
             _     -> shows s
-
-peek :: Stack -> String
-peek ys = show $ head ys
 
 tonum :: Symbol -> Double
 tonum (Int n)      = fromIntegral n
@@ -136,6 +141,7 @@ tonum (Frac (n,d)) = (fromIntegral n)/(fromIntegral d)
 tonum (Real x)     = x
 tonum (Bool True)  = 1
 tonum (Bool False) = 0
+tonum _ = error "Can't convert this to a number"
 
 
 -- push a Symbol to the stack
@@ -148,10 +154,8 @@ push x = modify $ modCtxStack (x:)
 pop :: ExceptT CalcError (State Context) Symbol
 pop = do
   ctx <- get
-  if null $ ctxStack ctx
-    then throwE EmptyStack
-    else do
-      let (x:xs) = ctxStack ctx
+  case ctxStack ctx of
+    [] -> throwE EmptyStack
+    (x:xs) -> do
       put $ ctx { ctxStack = xs }
       return x
-

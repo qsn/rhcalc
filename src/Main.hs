@@ -18,8 +18,10 @@ errorPrefix = "  > "
 -- C-d and "exit" quit
 calc_main :: (Context,Context) -> Maybe CalcError -> IO ()
 calc_main (safeCtx, ctx) err = do
-  newSafeCtx <- X.catch (try ctx) (handler safeCtx)
-  printError err
+  res <- X.tryJust isPatternMatchFail (try ctx)
+  newSafeCtx <- case res of
+    Left err -> printError err >> return safeCtx
+    Right ctx -> printError' err >> return ctx
   maybeLine <- readline prompt
   case maybeLine >>= exit of
     Nothing     -> return ()
@@ -30,19 +32,12 @@ calc_main (safeCtx, ctx) err = do
   where try ctx = do
           putStr $ dumpcontext ctx
           return ctx
-        handler ctx e = do
-          putStr $ dumpcontext ctx
-          printException e
-          return ctx
-        printException :: SomeException -> IO ()
-        printException e = printError
-          $ OperationNotSupported
-          <$ ((fromException e) :: Maybe PatternMatchFail)
         exit s = if s == "exit" then Nothing else Just s
+        isPatternMatchFail (PatternMatchFail _) = Just OperationNotSupported
 
 -- display an error in console interactive mode
-printError :: Maybe CalcError -> IO ()
-printError err = when (isJust err) . putStrLn $ errorPrefix ++ show (fromJust err)
+printError err = putStrLn $ errorPrefix ++ show err
+printError' = sequence_ . fmap printError
 
 -- script/single input mode, evaluate one expression and exit
 printResult :: (Maybe CalcError, Context) -> IO a

@@ -11,9 +11,12 @@ import Control.Exception as X
 import Stack (dumpstack, CalcError, Context(..), ctxBase)
 import Core  (calc, st_dft)
 
+prompt = "% "
+errorPrefix = "  > "
+
 do_calc_main :: Context -> IO ()
 do_calc_main ctx = do
-  maybeLine <- readline "% "
+  maybeLine <- readline prompt
   ((ctx', err), c) <- case maybeLine of
     Nothing     -> return ((ctx, Nothing), False)
     Just "exit" -> return ((ctx, Nothing) ,False)
@@ -51,7 +54,7 @@ unwrapError (Right _, ctx_success)= (ctx_success, Nothing)
 
 -- display an error in console interactive mode
 printError :: Maybe CalcError -> IO ()
-printError err = when (isJust err) . putStrLn $ "  > " ++ show (fromJust err)
+printError err = when (isJust err) . putStrLn $ errorPrefix ++ show (fromJust err)
 
 -- script/single input mode, evaluate one expression and exit
 printResult :: (Either CalcError a, Context) -> IO a

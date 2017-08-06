@@ -217,8 +217,8 @@ op_unit = [("convert",(3,1,unit_convert, "Unit converter"))]
 -- a script here is supposed to contain only basic operators, not core functions, so it has no effect on variables, only the stack
 runscript :: String -> Stack -> Either CalcError Stack
 runscript script stack = h $ calc script $ contextFromStack stack
-  where h (Left err, _) = Left err
-        h (Right _, ctx) = Right $ ctxStack ctx
+  where h (Just err, _) = Left err
+        h (Nothing, ctx) = Right $ ctxStack ctx
 
 eitherToStack :: Either CalcError Stack -> Stack
 eitherToStack (Left err) = [String $ show err]

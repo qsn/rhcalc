@@ -3,63 +3,46 @@
 import System.Exit
 import System.Environment (getArgs)
 import System.Console.Readline
-import qualified Data.Map as Map
-import Data.Maybe (isJust,fromJust)
-import Control.Monad (when)
-import Control.Exception as X
+import qualified Control.Exception as X
 
-import Stack (dumpstack, CalcError, Context(..), ctxBase)
+import Stack (dumpcontext, CalcError(OperationNotSupported), Context)
 import Core  (calc, st_dft)
 
-do_calc_main :: Context -> IO ()
-do_calc_main ctx = do
-  maybeLine <- readline "% "
-  ((ctx', err), c) <- case maybeLine of
-    Nothing     -> return ((ctx, Nothing), False)
-    Just "exit" -> return ((ctx, Nothing) ,False)
-    Just args   -> do
-      addHistory args
-      return (unwrapError $ calc args ctx, True)
-  if c then calc_main (ctx, ctx') err else return ()
+prompt = "% "
+errorPrefix = "  > "
 
 -- interactive mode, console, main loop
 -- C-d and "exit" quit
 calc_main :: (Context,Context) -> Maybe CalcError -> IO ()
 calc_main (safeCtx, ctx) err = do
-  let s = dumpstack (ctxBase ctx) (ctxStack ctx)
-  let s' = dumpstack (ctxBase safeCtx) (ctxStack safeCtx)
-  newctx <- X.catch (success s ctx) (handler s' safeCtx)
-  printError err
-  do_calc_main newctx
-  where success :: String -> a -> IO a
-        success s res = do
-          putStr s
-          return res
-        handler s ret e = do
-          putStr s
-          printErr e
-          return ret
-        printErr :: SomeException -> IO ()
-        printErr e =  do
-          case (fromException e) :: Maybe PatternMatchFail of
-           Just x -> putStrLn "operation not supported"
-           nothing -> return ()
-
-unwrapError :: (Either CalcError a, Context) -> (Context, Maybe CalcError)
-unwrapError (Left e,  ctx_error)  = (ctx_error, Just e)
-unwrapError (Right _, ctx_success)= (ctx_success, Nothing)
+  res <- X.tryJust isPatternMatchFail (try ctx)
+  newSafeCtx <- case res of
+    Left err -> printError err >> return safeCtx
+    Right ctx -> printError' err >> return ctx
+  maybeLine <- readline prompt
+  case maybeLine >>= exit of
+    Nothing     -> return ()
+    Just args   -> do
+      addHistory args
+      let (err, newCtx) = calc args newSafeCtx
+      calc_main (newSafeCtx, newCtx) err
+  where try ctx = do
+          putStr $ dumpcontext ctx
+          return ctx
+        exit s = if s == "exit" then Nothing else Just s
+        isPatternMatchFail (X.PatternMatchFail _) = Just OperationNotSupported
 
 -- display an error in console interactive mode
-printError :: Maybe CalcError -> IO ()
-printError err = when (isJust err) . putStrLn $ "  > " ++ show (fromJust err)
+printError err = putStrLn $ errorPrefix ++ show err
+printError' = sequence_ . fmap printError
 
 -- script/single input mode, evaluate one expression and exit
-printResult :: (Either CalcError a, Context) -> IO a
-printResult (Left err, _) = do
+printResult :: (Maybe CalcError, Context) -> IO a
+printResult (Just err, _) = do
   putStrLn $ show err
   exitFailure
-printResult (Right _, ctx) = do
-  putStr $ dumpstack (ctxBase ctx) (ctxStack ctx)
+printResult (Nothing, ctx) = do
+  putStr $ dumpcontext ctx
   exitSuccess
 
 -- standard mode: console, interactive
@@ -68,13 +51,16 @@ printResult (Right _, ctx) = do
 --   -e evaluate the string passed and exit
 main :: IO ()
 main = do
+  input <- getInput
+  case input of
+    Nothing -> calc_main (st_dft,st_dft) Nothing
+    Just expr -> printResult $ calc expr st_dft
+
+getInput :: IO (Maybe String)
+getInput = do
   args <- getArgs
   if "-" `elem` args
-  then do
-    expr <- getContents
-    printResult $ calc expr st_dft
-  else if length args > 1 && (args !! 0) == "-e"
-       then do
-         let expr = args !! 1
-         printResult $ calc expr st_dft
-       else calc_main (st_dft,st_dft) Nothing
+    then fmap Just getContents
+    else if length args > 1 && (args !! 0) == "-e"
+         then return $ Just (args !! 1)
+         else return Nothing

@@ -139,10 +139,14 @@ ifInt (Int i) action
 ifInt _ _ = throwE $ TypeMismatch "need Int >= 1"
 
 -- main evaluator
-calc :: String -> Context -> (Either CalcError (), Context)
+calc :: String -> Context -> (Maybe CalcError, Context)
 calc args ctx = case parse args of
-  Left e -> (Left e, ctx)
-  Right s -> runState (runExceptT $ mapM_ run s) ctx
+  Left e -> (Just e, ctx)
+  Right s -> let (err, ctx') = runState (runExceptT $ mapM_ run s) ctx
+             in (leftToMaybe err, ctx')
+
+leftToMaybe :: Either a b -> Maybe a
+leftToMaybe = either Just (const Nothing)
 
 eval :: ExceptT CalcError (State Context) a -> Context -> (Either CalcError a, Context)
 eval f s = runState (runExceptT f) s

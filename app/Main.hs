@@ -2,27 +2,34 @@
 
 import System.Exit (exitFailure, exitSuccess)
 import System.Environment (getArgs)
-import System.Console.Haskeline (runInputT, InputT, getInputLine, defaultSettings, outputStrLn)
+import System.Console.Haskeline (runInputT, InputT, getInputLine, defaultSettings, outputStrLn, getHistory, putHistory)
+import System.Console.Haskeline.History (historyLines, addHistory, emptyHistory)
 import Control.Monad.Trans (liftIO)
 import qualified Control.Exception as X
+import System.Environment.XDG.BaseDir
+import System.Directory (doesFileExist, createDirectoryIfMissing)
 
 import Data.Maybe (isJust)
 import Control.Monad (when)
 
+import Data.Text (unpack)
+import qualified Data.Text.IO as TIO
+
 import Stack (dumpcontext, CalcError(OperationNotSupported), Context)
 import Core  (calc, st_dft)
 
-prompt, errorPrefix :: String
+prompt, errorPrefix, xdgName :: String
 prompt = "% "
 errorPrefix = "  > "
+xdgName = "rhcalc"
 
 -- interactive mode, console, main loop
 -- C-d and "exit" quit
-repl :: Context -> InputT IO ()
+repl :: Context -> InputT IO [String]
 repl ctx = do
   maybeLine <- getInputLine prompt
   case maybeLine >>= exit of
-    Nothing     -> return ()
+    Nothing     -> fmap historyLines getHistory
     Just args   -> do
       let (merr, tryCtx) = calc args ctx
       when (isJust merr) $ printErrorM merr
@@ -59,7 +66,10 @@ main :: IO ()
 main = do
   input <- getInput
   case input of
-    Nothing -> runInputT defaultSettings $ repl st_dft
+    Nothing -> do
+      origHist <- readHistory
+      hist <- runInputT defaultSettings $ replInit origHist
+      writeHistory $ take (length hist - length origHist) hist
     Just expr -> printResult $ calc expr st_dft
 
 getInput :: IO (Maybe String)
@@ -70,3 +80,24 @@ getInput = do
     else if length args > 1 && (args !! 0) == "-e"
          then return $ Just (args !! 1)
          else return Nothing
+
+readHistory :: IO [String]
+readHistory = do
+  hfp <- getUserDataFile xdgName "history"
+  exists <- doesFileExist hfp
+  if not exists then return []
+    else do
+      ls <- fmap unpack $ TIO.readFile hfp
+      return $ reverse $ lines ls
+
+writeHistory :: [String] -> IO ()
+writeHistory hs = do
+  hfp <- getUserDataFile xdgName "history"
+  hdir <- getUserDataDir xdgName
+  createDirectoryIfMissing True hdir
+  appendFile hfp $ unlines $ reverse hs
+
+replInit :: [String] -> InputT IO [String]
+replInit origHist = do
+  putHistory $ foldr addHistory emptyHistory origHist
+  repl st_dft

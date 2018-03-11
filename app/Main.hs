@@ -25,7 +25,7 @@ repl ctx = do
       res <- X.tryJust isPatternMatchFail (try tryCtx)
       newCtx <- case res of
         Left err -> printError err >> return ctx
-        Right newCtx -> printError' merr >> return newCtx
+        Right newCtx -> printErrorM merr >> return newCtx
       repl newCtx
   where exit s = if s == "exit" then Nothing else Just s
         try ctx = do
@@ -36,8 +36,8 @@ repl ctx = do
 -- display an error in console interactive mode
 printError :: CalcError -> IO ()
 printError err = putStrLn $ errorPrefix ++ show err
-printError' :: Maybe CalcError -> IO ()
-printError' = sequence_ . fmap printError
+printErrorM :: Maybe CalcError -> IO ()
+printErrorM = mapM_ printError
 
 -- script/single input mode, evaluate one expression and exit
 printResult :: (Maybe CalcError, Context) -> IO a

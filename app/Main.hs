@@ -14,23 +14,23 @@ errorPrefix = "  > "
 
 -- interactive mode, console, main loop
 -- C-d and "exit" quit
-calc_main :: (Context,Context) -> Maybe CalcError -> IO ()
-calc_main (safeCtx, tryCtx) merr = do
-  res <- X.tryJust isPatternMatchFail (try tryCtx)
-  newSafeCtx <- case res of
-    Left err -> printError err >> return safeCtx
-    Right newCtx -> printError' merr >> return newCtx
+repl :: Context -> IO ()
+repl ctx = do
   maybeLine <- readline prompt
   case maybeLine >>= exit of
     Nothing     -> return ()
     Just args   -> do
       addHistory args
-      let (err, newCtx) = calc args newSafeCtx
-      calc_main (newSafeCtx, newCtx) err
-  where try ctx = do
+      let (merr, tryCtx) = calc args ctx
+      res <- X.tryJust isPatternMatchFail (try tryCtx)
+      newCtx <- case res of
+        Left err -> printError err >> return ctx
+        Right newCtx -> printError' merr >> return newCtx
+      repl newCtx
+  where exit s = if s == "exit" then Nothing else Just s
+        try ctx = do
           putStr $ dumpcontext ctx
           return ctx
-        exit s = if s == "exit" then Nothing else Just s
         isPatternMatchFail (X.PatternMatchFail _) = Just OperationNotSupported
 
 -- display an error in console interactive mode
@@ -56,7 +56,7 @@ main :: IO ()
 main = do
   input <- getInput
   case input of
-    Nothing -> calc_main (st_dft,st_dft) Nothing
+    Nothing -> repl st_dft
     Just expr -> printResult $ calc expr st_dft
 
 getInput :: IO (Maybe String)

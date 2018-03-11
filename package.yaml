@@ -24,7 +24,7 @@ dependencies:
 - mtl >=2.2 && <2.3
 - transformers >=0.4
 - containers >=0.5
-- readline >= 1.0
+- haskeline >= 0.7
 
 library:
   source-dirs: src

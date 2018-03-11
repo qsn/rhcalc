@@ -2,7 +2,8 @@
 
 import System.Exit (exitFailure, exitSuccess)
 import System.Environment (getArgs)
-import System.Console.Readline (addHistory, readline)
+import System.Console.Haskeline (runInputT, InputT, getInputLine, defaultSettings, outputStrLn)
+import Control.Monad.Trans (liftIO)
 import qualified Control.Exception as X
 
 import Data.Maybe (isJust)
@@ -17,16 +18,15 @@ errorPrefix = "  > "
 
 -- interactive mode, console, main loop
 -- C-d and "exit" quit
-repl :: Context -> IO ()
+repl :: Context -> InputT IO ()
 repl ctx = do
-  maybeLine <- readline prompt
+  maybeLine <- getInputLine prompt
   case maybeLine >>= exit of
     Nothing     -> return ()
     Just args   -> do
-      addHistory args
       let (merr, tryCtx) = calc args ctx
       when (isJust merr) $ printErrorM merr
-      res <- X.tryJust isPatternMatchFail (try tryCtx)
+      res <- liftIO $ X.tryJust isPatternMatchFail (try tryCtx)
       newCtx <- either handleErr return res
       repl newCtx
   where exit s = if s == "exit" then Nothing else Just s
@@ -34,12 +34,12 @@ repl ctx = do
           putStr $ dumpcontext ctx
           return ctx
         isPatternMatchFail (X.PatternMatchFail _) = Just OperationNotSupported
-        handleErr err = printError err >> try ctx >> return ctx
+        handleErr err = printError err >> liftIO (try ctx) >> return ctx
 
 -- display an error in console interactive mode
-printError :: CalcError -> IO ()
-printError err = putStrLn $ errorPrefix ++ show err
-printErrorM :: Maybe CalcError -> IO ()
+printError :: CalcError -> InputT IO ()
+printError err = outputStrLn $ errorPrefix ++ show err
+printErrorM :: Maybe CalcError -> InputT IO ()
 printErrorM = mapM_ printError
 
 -- script/single input mode, evaluate one expression and exit
@@ -59,7 +59,7 @@ main :: IO ()
 main = do
   input <- getInput
   case input of
-    Nothing -> repl st_dft
+    Nothing -> runInputT defaultSettings $ repl st_dft
     Just expr -> printResult $ calc expr st_dft
 
 getInput :: IO (Maybe String)

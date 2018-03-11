@@ -8,3 +8,5 @@ rhcalc
 cabal.sandbox.config
 .cabal-sandbox
 dist
+.stack-work
+*.cabal

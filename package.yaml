@@ -1,0 +1,41 @@
+name:                rhcalc
+version:             0.1.0.0
+github:              "qsn/rhcalc"
+license:             MIT
+author:              "Sabrina Dubroca"
+maintainer:          "sd@queasysnail.net"
+copyright:           "Copyright (c) 2013-2018 Sabrina Dubroca"
+
+extra-source-files:
+- README.md
+
+# Metadata used when publishing your package
+synopsis:            RPN calculator
+category:            Math
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/qsn/rhcalc#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- parsec >=3.1 && <3.2
+- mtl >=2.2 && <2.3
+- transformers >=0.4
+- containers >=0.5
+- readline >= 1.0
+
+library:
+  source-dirs: src
+
+executables:
+  rhcalc:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - rhcalc

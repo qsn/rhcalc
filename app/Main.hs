@@ -27,15 +27,14 @@ repl ctx = do
       let (merr, tryCtx) = calc args ctx
       when (isJust merr) $ printErrorM merr
       res <- X.tryJust isPatternMatchFail (try tryCtx)
-      newCtx <- case res of
-        Left err -> printError err >> return ctx
-        Right newCtx -> return newCtx
+      newCtx <- either handleErr return res
       repl newCtx
   where exit s = if s == "exit" then Nothing else Just s
         try ctx = do
           putStr $ dumpcontext ctx
           return ctx
         isPatternMatchFail (X.PatternMatchFail _) = Just OperationNotSupported
+        handleErr err = printError err >> return ctx
 
 -- display an error in console interactive mode
 printError :: CalcError -> IO ()

@@ -34,7 +34,7 @@ repl ctx = do
           putStr $ dumpcontext ctx
           return ctx
         isPatternMatchFail (X.PatternMatchFail _) = Just OperationNotSupported
-        handleErr err = printError err >> return ctx
+        handleErr err = printError err >> try ctx >> return ctx
 
 -- display an error in console interactive mode
 printError :: CalcError -> IO ()

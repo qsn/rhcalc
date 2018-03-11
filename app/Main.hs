@@ -5,6 +5,9 @@ import System.Environment (getArgs)
 import System.Console.Readline (addHistory, readline)
 import qualified Control.Exception as X
 
+import Data.Maybe (isJust)
+import Control.Monad (when)
+
 import Stack (dumpcontext, CalcError(OperationNotSupported), Context)
 import Core  (calc, st_dft)
 
@@ -22,10 +25,11 @@ repl ctx = do
     Just args   -> do
       addHistory args
       let (merr, tryCtx) = calc args ctx
+      when (isJust merr) $ printErrorM merr
       res <- X.tryJust isPatternMatchFail (try tryCtx)
       newCtx <- case res of
         Left err -> printError err >> return ctx
-        Right newCtx -> printErrorM merr >> return newCtx
+        Right newCtx -> return newCtx
       repl newCtx
   where exit s = if s == "exit" then Nothing else Just s
         try ctx = do
